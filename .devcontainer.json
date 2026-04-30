@@ -3,6 +3,7 @@
   "image": "us-central1-docker.pkg.dev/verily-modules/workbench-apps/jupyter-server-base:latest",
   "features": {},
   "postCreateCommand": "bash quickstart.sh",
+  "postStartCommand": "nohup python3 dashboard/app.py > /tmp/v2f_dashboard.log 2>&1 &",
   "customizations": {
     "vscode": {
       "extensions": [
