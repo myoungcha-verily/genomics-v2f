@@ -16,9 +16,9 @@ annotation:
 
 databases:
   clinvar:
-    bq_table: "bigquery-public-data.human_variant_annotation.clinvar_hg38"
+    bq_table: "bigquery-public-data.human_variant_annotation.ncbi_clinvar_hg38_20180701"
   gnomad:
-    bq_table: "bigquery-public-data.gnomAD.v4_1_0_exomes__variant_results"
+    bq_table: "bigquery-public-data.gnomAD.v3_genomes__chr{chrom}"
 
 acmg:
   ba1_threshold: 0.05

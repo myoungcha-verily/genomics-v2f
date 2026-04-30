@@ -112,7 +112,10 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
 
 <div class="header">
   <h1>Variant-to-Function Reporter</h1>
-  <span id="statusBadge" class="status-badge status-idle">Idle</span>
+  <div>
+    <span id="demoActiveBadge" class="status-badge hidden" style="background:#2e7d32;margin-right:8px;">DEMO</span>
+    <span id="statusBadge" class="status-badge status-idle">Idle</span>
+  </div>
 </div>
 
 <div class="tabs">
@@ -161,10 +164,10 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
 
 <!-- ===== SETUP ===== -->
 <div id="tab-setup" class="tab-panel">
-  <div class="card" style="border-left:4px solid #2e7d32;background:#f1f8e9;">
-    <h3 style="color:#1b5e20;">New here? Try the bundled demo</h3>
-    <p style="color:#33691e;margin:6px 0 12px;">Loads a small synthetic VCF (10 variants across BRCA1, TP53, MYH7, PTEN, BRCA2) plus pre-computed pipeline outputs so every tab populates instantly. No external data needed.</p>
-    <button class="btn btn-primary" onclick="loadDemo()" style="background:#2e7d32;">Load demo data</button>
+  <div id="demoSetupCard" class="card" style="border-left:4px solid #2e7d32;background:#f1f8e9;">
+    <h3 id="demoSetupHeading" style="color:#1b5e20;">New here? Try the bundled demo</h3>
+    <p id="demoSetupBody" style="color:#33691e;margin:6px 0 12px;">Loads a small synthetic VCF (10 variants across BRCA1, TP53, MYH7, PTEN, BRCA2) plus pre-computed pipeline outputs so every tab populates instantly. No external data needed.</p>
+    <button id="demoSetupBtn" class="btn btn-primary" onclick="loadDemo()" style="background:#2e7d32;">Load demo data</button>
     <span id="demoSetupStatus" style="margin-left:14px;font-size:13px;color:#33691e;"></span>
   </div>
   <div class="card">
@@ -203,8 +206,8 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
     <div class="wizard-step">
       <h4><span class="step-num">5</span>Reference databases</h4>
       <p class="help">BigQuery tables for ClinVar pathogenicity and gnomAD frequencies. Defaults below are the public datasets.</p>
-      <div class="field-row"><label>ClinVar table</label><input type="text" id="w_clinvar" value="bigquery-public-data.human_variant_annotation.clinvar_hg38"></div>
-      <div class="field-row"><label>gnomAD table</label><input type="text" id="w_gnomad" value="bigquery-public-data.gnomAD.v4_1_0_exomes__variant_results"></div>
+      <div class="field-row"><label>ClinVar table</label><input type="text" id="w_clinvar" value="bigquery-public-data.human_variant_annotation.ncbi_clinvar_hg38_20180701"></div>
+      <div class="field-row"><label>gnomAD table</label><input type="text" id="w_gnomad" value="bigquery-public-data.gnomAD.v3_genomes__chr{chrom}"></div>
     </div>
 
     <div class="wizard-step">
@@ -306,10 +309,10 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
 
 <!-- ===== SETTINGS ===== -->
 <div id="tab-settings" class="tab-panel">
-  <div class="card" style="border-left:4px solid #f9a825;background:#fff8e1;">
-    <h3 style="color:#e65100;">Demo data controls</h3>
+  <div id="demoSettingsCard" class="card" style="border-left:4px solid #f9a825;background:#fff8e1;">
+    <h3 style="color:#e65100;">Demo data controls <span id="demoSettingsBadge" class="hidden" style="background:#2e7d32;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:600;letter-spacing:.5px;">ACTIVE</span></h3>
     <p style="color:#5d4037;margin:6px 0 12px;">Load the bundled demo to populate every tab with synthetic data, or reset to the empty first-run state for a clean walkthrough.</p>
-    <button class="btn btn-primary" onclick="loadDemo()" style="background:#2e7d32;">Load demo data</button>
+    <button id="demoSettingsLoadBtn" class="btn btn-primary" onclick="loadDemo()" style="background:#2e7d32;">Load demo data</button>
     <button class="btn btn-sm" onclick="resetDemo()" style="margin-left:8px;background:#d32f2f;color:#fff;">Reset to first-run state</button>
     <span id="demoResetStatus" style="margin-left:14px;font-size:13px;"></span>
   </div>
@@ -546,11 +549,32 @@ function runPipeline() {
     });
 }
 
-// Detect "demo loaded" by checking for the demo report
+// Detect "demo loaded" by checking for the DEMO_PROBAND report; flip every
+// piece of demo-state UI consistently across tabs.
 function checkDemoLoaded() {
   fetch('api/reports').then(r=>r.json()).then(data => {
-    const demoActive = (data.reports || []).some(r => r.sample_id === "DEMO_PROBAND");
-    document.getElementById('demoLoadedNotice').classList.toggle('hidden', !demoActive);
+    const active = (data.reports || []).some(r => r.sample_id === "DEMO_PROBAND");
+    const pipeNotice = document.getElementById('demoLoadedNotice');
+    if (pipeNotice) pipeNotice.classList.toggle('hidden', !active);
+    const headerBadge = document.getElementById('demoActiveBadge');
+    if (headerBadge) headerBadge.classList.toggle('hidden', !active);
+    const settingsBadge = document.getElementById('demoSettingsBadge');
+    if (settingsBadge) settingsBadge.classList.toggle('hidden', !active);
+    const setupHeading = document.getElementById('demoSetupHeading');
+    const setupBody = document.getElementById('demoSetupBody');
+    const setupBtn = document.getElementById('demoSetupBtn');
+    const settingsBtn = document.getElementById('demoSettingsLoadBtn');
+    if (active) {
+      if (setupHeading) setupHeading.textContent = 'Demo data is loaded';
+      if (setupBody) setupBody.textContent = 'All 7 stages have curated outputs. Open Variants or Reports to explore. Reset from the Settings tab to clear.';
+      if (setupBtn) { setupBtn.textContent = 'Already loaded'; setupBtn.disabled = true; setupBtn.style.opacity = '0.6'; setupBtn.style.cursor = 'not-allowed'; }
+      if (settingsBtn) { settingsBtn.disabled = true; settingsBtn.style.opacity = '0.6'; settingsBtn.style.cursor = 'not-allowed'; }
+    } else {
+      if (setupHeading) setupHeading.textContent = 'New here? Try the bundled demo';
+      if (setupBody) setupBody.textContent = 'Loads a small synthetic VCF (10 variants across BRCA1, TP53, MYH7, PTEN, BRCA2) plus pre-computed pipeline outputs so every tab populates instantly. No external data needed.';
+      if (setupBtn) { setupBtn.textContent = 'Load demo data'; setupBtn.disabled = false; setupBtn.style.opacity = '1'; setupBtn.style.cursor = 'pointer'; }
+      if (settingsBtn) { settingsBtn.disabled = false; settingsBtn.style.opacity = '1'; settingsBtn.style.cursor = 'pointer'; }
+    }
   }).catch(()=>{});
 }
 
@@ -709,8 +733,8 @@ function loadSetup() {
     document.querySelector(`input[name=w_ref][value="${ref}"]`)?.click();
     const vep = annot.vep_mode || 'docker';
     document.querySelector(`input[name=w_vep][value="${vep}"]`)?.click();
-    document.getElementById('w_clinvar').value = (dbs.clinvar && dbs.clinvar.bq_table) || 'bigquery-public-data.human_variant_annotation.clinvar_hg38';
-    document.getElementById('w_gnomad').value = (dbs.gnomad && dbs.gnomad.bq_table) || 'bigquery-public-data.gnomAD.v4_1_0_exomes__variant_results';
+    document.getElementById('w_clinvar').value = (dbs.clinvar && dbs.clinvar.bq_table) || 'bigquery-public-data.human_variant_annotation.ncbi_clinvar_hg38_20180701';
+    document.getElementById('w_gnomad').value = (dbs.gnomad && dbs.gnomad.bq_table) || 'bigquery-public-data.gnomAD.v3_genomes__chr{chrom}';
     document.getElementById('w_phen_enabled').checked = !!phen.enabled;
     document.getElementById('w_phen_project').value = phen.fhir_project || '';
     document.getElementById('w_phen_dataset').value = phen.fhir_dataset || '';

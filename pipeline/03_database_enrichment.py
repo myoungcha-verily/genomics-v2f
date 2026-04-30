@@ -56,7 +56,7 @@ def run(config: dict) -> dict:
 
     # Step 2: gnomAD enrichment
     gnomad_config = db_config.get("gnomad", {})
-    if gnomad_config.get("bq_table"):
+    if gnomad_config.get("bq_table_pattern") or gnomad_config.get("bq_table"):
         df = _enrich_gnomad(df, gnomad_config)
     else:
         logger.info("gnomAD BQ table not configured — skipping")
@@ -99,35 +99,40 @@ def run(config: dict) -> dict:
 
 
 def _enrich_clinvar(df: pd.DataFrame, clinvar_config: dict) -> pd.DataFrame:
-    """Enrich variants with ClinVar clinical significance."""
+    """Enrich variants with ClinVar clinical significance.
+
+    Targets the ncbi_clinvar_hg38_* schema on bigquery-public-data:
+      reference_name STRING (no 'chr' prefix)
+      start_position INTEGER (0-based)
+      reference_bases STRING
+      alternate_bases ARRAY<STRUCT<alt STRING>>
+      CLNSIG ARRAY<STRING>
+      CLNREVSTAT ARRAY<STRING>
+      ALLELEID INTEGER
+    """
     from google.cloud import bigquery
 
     bq_table = clinvar_config["bq_table"]
-    min_stars = clinvar_config.get("min_review_stars", 1)
-
     logger.info(f"Querying ClinVar: {bq_table}")
     client = bigquery.Client()
 
-    # Build variant list for query
-    # ClinVar uses chrom, pos, ref, alt
     variants_for_query = df[["chrom", "pos", "ref", "alt"]].drop_duplicates()
     n_variants = len(variants_for_query)
     logger.info(f"Querying {n_variants} unique variants against ClinVar")
 
-    # For large variant sets, query in batches
-    batch_size = 1000
+    batch_size = 500
     clinvar_results = []
 
     for start in range(0, n_variants, batch_size):
         batch = variants_for_query.iloc[start:start + batch_size]
 
-        # Build WHERE clause
         conditions = []
         for _, row in batch.iterrows():
             chrom = str(row["chrom"]).replace("chr", "")
+            # ClinVar table uses 0-based start_position; pipeline pos is 1-based
             conditions.append(
-                f"(chromosome = '{chrom}' AND start_position = {row['pos']} "
-                f"AND reference_bases = '{row['ref']}' AND alternate_bases = '{row['alt']}')"
+                f"(reference_name = '{chrom}' AND start_position = {int(row['pos']) - 1} "
+                f"AND reference_bases = '{row['ref']}' AND alt_struct.alt = '{row['alt']}')"
             )
 
         if not conditions:
@@ -136,14 +141,15 @@ def _enrich_clinvar(df: pd.DataFrame, clinvar_config: dict) -> pd.DataFrame:
         where = " OR ".join(conditions)
         query = f"""
         SELECT
-            chromosome,
-            start_position AS pos,
+            reference_name,
+            start_position + 1 AS pos,
             reference_bases AS ref,
-            alternate_bases AS alt,
-            clinical_significance AS classification,
-            review_status,
-            variation_id AS clinvar_id
-        FROM `{bq_table}`
+            alt_struct.alt AS alt,
+            ARRAY_TO_STRING(CLNSIG, '|') AS classification,
+            ARRAY_TO_STRING(CLNREVSTAT, '|') AS review_status,
+            ALLELEID AS clinvar_id
+        FROM `{bq_table}`,
+             UNNEST(alternate_bases) AS alt_struct
         WHERE {where}
         """
 
@@ -154,7 +160,7 @@ def _enrich_clinvar(df: pd.DataFrame, clinvar_config: dict) -> pd.DataFrame:
             logger.warning(f"ClinVar query batch failed: {e}")
             continue
 
-    if not clinvar_results:
+    if not clinvar_results or all(d.empty for d in clinvar_results):
         logger.info("No ClinVar matches found")
         df["clinvar_classification"] = None
         df["clinvar_review_stars"] = 0
@@ -163,29 +169,38 @@ def _enrich_clinvar(df: pd.DataFrame, clinvar_config: dict) -> pd.DataFrame:
 
     clinvar_df = pd.concat(clinvar_results, ignore_index=True)
 
-    # Map review status to stars
+    # Map CLNREVSTAT ('criteria_provided|_multiple_submitters|_no_conflicts'
+    # -> 2 stars, 'reviewed_by_expert_panel' -> 3, etc.)
     from pipeline.utils._clinvar_stars import map_review_status
     clinvar_df["clinvar_review_stars"] = clinvar_df["review_status"].apply(
         map_review_status
     )
 
-    # Normalize chromosome format
-    clinvar_df["chrom"] = clinvar_df["chromosome"].apply(
+    # Normalize CLNSIG: pick the most-pathogenic value if multiple are present
+    def _pick_sig(sig_str):
+        if not sig_str:
+            return None
+        parts = [p.strip() for p in str(sig_str).split("|") if p.strip()]
+        priority = ["Pathogenic", "Likely_pathogenic", "Pathogenic/Likely_pathogenic",
+                    "Uncertain_significance", "Likely_benign", "Benign",
+                    "Benign/Likely_benign"]
+        for p in priority:
+            if p in parts:
+                return p.replace("_", " ")
+        return parts[0].replace("_", " ") if parts else None
+
+    clinvar_df["clinvar_classification"] = clinvar_df["classification"].apply(_pick_sig)
+
+    clinvar_df["chrom"] = clinvar_df["reference_name"].apply(
         lambda x: f"chr{x}" if not str(x).startswith("chr") else str(x)
     )
 
-    # Merge
-    clinvar_df = clinvar_df.rename(columns={
-        "classification": "clinvar_classification",
-        "clinvar_id": "clinvar_id",
-    })
     clinvar_df = clinvar_df[["chrom", "pos", "ref", "alt",
                              "clinvar_classification", "clinvar_review_stars",
                              "clinvar_id"]].drop_duplicates(
         subset=["chrom", "pos", "ref", "alt"], keep="first"
     )
 
-    # Ensure pos types match
     df["pos"] = df["pos"].astype(int)
     clinvar_df["pos"] = clinvar_df["pos"].astype(int)
 
@@ -197,47 +212,59 @@ def _enrich_clinvar(df: pd.DataFrame, clinvar_config: dict) -> pd.DataFrame:
 
 
 def _enrich_gnomad(df: pd.DataFrame, gnomad_config: dict) -> pd.DataFrame:
-    """Enrich variants with gnomAD population frequencies."""
+    """Enrich variants with gnomAD population frequencies.
+
+    Targets the per-chromosome v3 genomes layout on bigquery-public-data:
+        bigquery-public-data.gnomAD.v3_genomes__chr{N}
+    Schema: reference_name STRING ('chr17'), start_position INTEGER (0-based),
+    reference_bases STRING, alternate_bases ARRAY<STRUCT<alt, AF, AC, ...>>.
+
+    Config supports a {chrom} placeholder in `bq_table_pattern`, e.g.
+        bq_table_pattern: bigquery-public-data.gnomAD.v3_genomes__chr{chrom}
+    Falls back to the legacy single-table `bq_table` for backward compat.
+    """
     from google.cloud import bigquery
 
-    bq_table = gnomad_config["bq_table"]
-    fallback = gnomad_config.get("bq_table_fallback", "")
+    pattern = gnomad_config.get("bq_table_pattern") or gnomad_config.get("bq_table", "")
+    if "{chrom}" not in pattern:
+        logger.info("gnomAD table has no {chrom} placeholder — skipping enrichment")
+        df["gnomad_af"] = None
+        df["gnomad_af_popmax"] = None
+        return df
 
-    logger.info(f"Querying gnomAD: {bq_table}")
+    logger.info(f"Querying gnomAD pattern: {pattern}")
     client = bigquery.Client()
 
-    variants_for_query = df[["chrom", "pos", "ref", "alt"]].drop_duplicates()
-    n_variants = len(variants_for_query)
-
-    batch_size = 1000
+    df["pos"] = df["pos"].astype(int)
     gnomad_results = []
 
-    for start in range(0, n_variants, batch_size):
-        batch = variants_for_query.iloc[start:start + batch_size]
+    # Group queries by chromosome — one BQ query per chrom
+    for chrom_prefixed, group in df[["chrom", "pos", "ref", "alt"]].drop_duplicates().groupby("chrom"):
+        chrom_bare = str(chrom_prefixed).replace("chr", "")
+        bq_table = pattern.format(chrom=chrom_bare)
 
         conditions = []
-        for _, row in batch.iterrows():
-            chrom = str(row["chrom"]).replace("chr", "")
+        for _, row in group.iterrows():
+            # gnomAD v3 start_position is 0-based
             conditions.append(
-                f"(reference_name = '{chrom}' AND start_position = {row['pos']} "
-                f"AND reference_bases = '{row['ref']}' AND alternate_bases = '{row['alt']}')"
+                f"(start_position = {int(row['pos']) - 1} "
+                f"AND reference_bases = '{row['ref']}' AND ab.alt = '{row['alt']}')"
             )
-
         if not conditions:
             continue
 
         where = " OR ".join(conditions)
         query = f"""
         SELECT
-            reference_name AS chromosome,
-            start_position AS pos,
+            reference_name,
+            start_position + 1 AS pos,
             reference_bases AS ref,
-            alternate_bases AS alt,
-            AF AS gnomad_af,
-            AF_popmax AS gnomad_af_popmax,
-            AN AS gnomad_an,
-            AC AS gnomad_ac
-        FROM `{bq_table}`
+            ab.alt AS alt,
+            ab.AF AS gnomad_af,
+            ab.AC AS gnomad_ac,
+            AN AS gnomad_an
+        FROM `{bq_table}`,
+             UNNEST(alternate_bases) AS ab
         WHERE {where}
         """
 
@@ -245,33 +272,26 @@ def _enrich_gnomad(df: pd.DataFrame, gnomad_config: dict) -> pd.DataFrame:
             batch_df = client.query(query).to_dataframe()
             gnomad_results.append(batch_df)
         except Exception as e:
-            logger.warning(f"gnomAD query failed: {e}")
-            if fallback:
-                logger.info(f"Trying fallback: {fallback}")
-                try:
-                    query = query.replace(bq_table, fallback)
-                    batch_df = client.query(query).to_dataframe()
-                    gnomad_results.append(batch_df)
-                except Exception as e2:
-                    logger.warning(f"gnomAD fallback also failed: {e2}")
+            logger.warning(f"gnomAD query for {chrom_prefixed} ({bq_table}) failed: {e}")
             continue
 
-    if not gnomad_results:
+    if not gnomad_results or all(d.empty for d in gnomad_results):
         logger.info("No gnomAD matches found")
         df["gnomad_af"] = None
         df["gnomad_af_popmax"] = None
         return df
 
     gnomad_df = pd.concat(gnomad_results, ignore_index=True)
-    gnomad_df["chrom"] = gnomad_df["chromosome"].apply(
-        lambda x: f"chr{x}" if not str(x).startswith("chr") else str(x)
+    gnomad_df["chrom"] = gnomad_df["reference_name"].apply(
+        lambda x: x if str(x).startswith("chr") else f"chr{x}"
     )
+    # popmax not present in this schema; leave as None
+    gnomad_df["gnomad_af_popmax"] = None
     gnomad_df = gnomad_df[["chrom", "pos", "ref", "alt",
                            "gnomad_af", "gnomad_af_popmax"]].drop_duplicates(
         subset=["chrom", "pos", "ref", "alt"], keep="first"
     )
 
-    df["pos"] = df["pos"].astype(int)
     gnomad_df["pos"] = gnomad_df["pos"].astype(int)
 
     df = df.merge(gnomad_df, on=["chrom", "pos", "ref", "alt"], how="left")

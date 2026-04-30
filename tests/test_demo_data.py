@@ -79,13 +79,14 @@ def test_precomputed_classifications_match_ground_truth(repo_root):
     df = pd.read_parquet(pq)
     by_gene = {(r.gene, r.pos): r.acmg_classification for _, r in df.iterrows()}
 
-    # Lookup table from demo/README.md ground truth
+    # Lookup table from demo/README.md ground truth (real ClinVar entries
+    # from ncbi_clinvar_hg38_20180701)
     expected = {
-        ("BRCA1", 43106478): "Pathogenic",
+        ("BRCA1", 43106455): "Pathogenic",
         ("TP53", 7674220): "Pathogenic",
-        ("MYH7", 23427594): "Likely pathogenic",
-        ("PTEN", 87864458): "VUS",
-        ("BRCA2", 32340301): "Likely benign",
+        ("MYH7", 23425316): "Likely pathogenic",
+        ("PTEN", 87863182): "VUS",
+        ("BRCA2", 32325090): "Likely benign",
     }
     for key, want in expected.items():
         assert by_gene.get(key) == want, (

@@ -14,11 +14,11 @@ Bundled synthetic data so a new user can explore the entire pipeline without bri
 
 | Gene | HGVS | Expected ACMG | Notes |
 |------|------|---------------|-------|
-| BRCA1 | c.181T>G | Pathogenic | BRCA1 Cys61Gly Ashkenazi founder; ClinVar P with 4-star review |
-| TP53 | c.524G>A | Pathogenic | TP53 Arg175His hotspot; classic Li-Fraumeni; ClinVar P |
-| MYH7 | c.4954G>A | Likely pathogenic | MYH7 missense; cardiomyopathy panel; synthetic-realistic |
-| PTEN | c.493G>A | VUS | PTEN missense; demonstrates VUS handling |
-| BRCA2 | c.7242A>G | Likely benign | BRCA2 silent change; common in NFE; ClinVar B/LB |
+| BRCA1 | BRCA1 missense | Pathogenic | ClinVar ALLELEID 69132; multi-submitter consensus, no conflicts |
+| TP53 | c.524G>A p.Arg175His | Pathogenic | ClinVar ALLELEID 27395; canonical R175H Li-Fraumeni hotspot |
+| MYH7 | MYH7 missense | Likely pathogenic | ClinVar ALLELEID 52071; cardiomyopathy panel; multi-submitter no conflict |
+| PTEN | PTEN missense | VUS | ClinVar ALLELEID 151535; Hereditary cancer-predisposing syndrome |
+| BRCA2 | BRCA2 variant | Likely benign | ClinVar ALLELEID 513333; criteria_provided single submitter |
 | BRCA1 | c.4837A>G (synonymous) | Benign | BRCA1 synonymous; demonstrates benign call |
 | TP53 | intronic | Benign | TP53 intron 3; common variant |
 | HBB | intergenic | Benign | HBB region; common SNP, sanity check |
