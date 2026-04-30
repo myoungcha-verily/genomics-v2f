@@ -1,0 +1,8 @@
+{
+  "id": "v2f-dashboard",
+  "description": "Variant-to-Function Reporter dashboard — VCF to ACMG-classified clinical reports",
+  "version": "1.0.0",
+  "name": "Genomics V2F Reporter",
+  "options": {},
+  "platforms": ["Any"]
+}

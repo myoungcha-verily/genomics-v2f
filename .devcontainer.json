@@ -1,9 +1,16 @@
 {
   "name": "Genomics V2F Reporter",
-  "image": "us-central1-docker.pkg.dev/verily-modules/workbench-apps/jupyter-server-base:latest",
-  "features": {},
-  "postCreateCommand": "bash quickstart.sh",
-  "postStartCommand": "nohup python3 dashboard/app.py > /tmp/v2f_dashboard.log 2>&1 &",
+  "dockerComposeFile": "docker-compose.yaml",
+  "service": "app",
+  "shutdownAction": "none",
+  "workspaceFolder": "/app",
+  "remoteUser": "root",
+  "forwardPorts": [8080],
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "16gb",
+    "storage": "50gb"
+  },
   "customizations": {
     "vscode": {
       "extensions": [
@@ -11,11 +18,5 @@
         "ms-toolsai.jupyter"
       ]
     }
-  },
-  "forwardPorts": [8080],
-  "hostRequirements": {
-    "cpus": 4,
-    "memory": "16gb",
-    "storage": "50gb"
   }
 }
