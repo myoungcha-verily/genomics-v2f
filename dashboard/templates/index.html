@@ -245,6 +245,9 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
 
 <!-- ===== PIPELINE ===== -->
 <div id="tab-pipeline" class="tab-panel">
+  <div id="demoLoadedNotice" class="banner hidden" style="background:#e3f2fd;border-left-color:#1565c0;">
+    <div class="msg" style="color:#0d47a1;"><strong>Demo data is loaded.</strong> All 7 stages already have curated outputs &mdash; click <a href="#" onclick="showTab('variants'); return false;" style="color:#1565c0;font-weight:600;">Variants</a> or <a href="#" onclick="showTab('reports'); return false;" style="color:#1565c0;font-weight:600;">Reports</a> to explore. Re-running the pipeline will <strong>overwrite</strong> the curated outputs with live pipeline results, which may differ in this environment if ClinVar/gnomAD lookups are unavailable.</div>
+  </div>
   <div class="card">
     <h3>Pipeline Control</h3>
     <div style="display:flex;gap:10px;margin-bottom:15px">
@@ -461,6 +464,7 @@ function loadDemo() {
     if (resetEl) resetEl.textContent = `Loaded ${data.variants} variants.`;
     document.getElementById('firstRunBanner').classList.add('hidden');
     refreshStatus();
+    checkDemoLoaded();
     loadConfig();
     loadSettings();
     loadSetup();
@@ -520,11 +524,34 @@ function refreshStatus() {
 
 // Pipeline
 function runPipeline() {
+  // Guard: if demo is loaded, warn that running the live pipeline will
+  // overwrite the curated outputs (and may produce different results in
+  // this environment if external DBs aren't reachable).
+  const demoLoaded = !document.getElementById('demoLoadedNotice').classList.contains('hidden');
+  if (demoLoaded) {
+    if (!confirm(
+      "Demo data is currently loaded with curated outputs.\n\n" +
+      "Running the live pipeline will OVERWRITE those outputs with " +
+      "fresh results from the actual pipeline stages. In this " +
+      "environment the live pipeline may produce different (often " +
+      "lower-fidelity) classifications if ClinVar / gnomAD lookups " +
+      "are unavailable.\n\n" +
+      "Continue and replace the demo outputs?"
+    )) return;
+  }
   fetch('api/pipeline/run', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})
     .then(r=>r.json()).then(data => {
       if (data.error) { alert(data.error); return; }
       pollInterval = setInterval(pollPipelineLog, 2000);
     });
+}
+
+// Detect "demo loaded" by checking for the demo report
+function checkDemoLoaded() {
+  fetch('api/reports').then(r=>r.json()).then(data => {
+    const demoActive = (data.reports || []).some(r => r.sample_id === "DEMO_PROBAND");
+    document.getElementById('demoLoadedNotice').classList.toggle('hidden', !demoActive);
+  }).catch(()=>{});
 }
 
 function cancelPipeline() {
@@ -845,7 +872,9 @@ function saveSettings() {
 // Init
 refreshStatus();
 checkFirstRun();
+checkDemoLoaded();
 setInterval(refreshStatus, 15000);
+setInterval(checkDemoLoaded, 30000);
 </script>
 </body>
 </html>

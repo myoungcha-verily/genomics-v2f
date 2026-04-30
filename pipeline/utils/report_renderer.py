@@ -9,7 +9,7 @@ import pandas as pd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from pipeline.utils.acmg_engine import classification_color, classification_tier
-from pipeline.utils.hgvs_formatter import variant_display_name, format_frequency
+from pipeline.utils.hgvs_formatter import variant_display_name
 from pipeline.utils.population_freq import format_frequency as fmt_freq
 
 logger = logging.getLogger(__name__)
