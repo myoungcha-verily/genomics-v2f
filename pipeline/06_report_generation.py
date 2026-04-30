@@ -58,6 +58,7 @@ def run(config: dict) -> dict:
 
     # Generate report per proband
     reports_generated = []
+    report_errors = []  # list of {sample_id, error_type, message}
 
     if "sample_id" in df.columns:
         probands = df["sample_id"].unique()
@@ -79,19 +80,48 @@ def run(config: dict) -> dict:
             )
             reports_generated.append(report_path)
             logger.info(f"Report generated: {report_path}")
+        except (FileNotFoundError, OSError) as e:
+            err = {"sample_id": proband_id, "error_type": "io_error", "message": str(e)}
+            report_errors.append(err)
+            logger.error(f"Report I/O failed for {proband_id}: {e}")
+        except (KeyError, ValueError, TypeError) as e:
+            err = {"sample_id": proband_id, "error_type": "data_error", "message": str(e)}
+            report_errors.append(err)
+            logger.error(f"Report data error for {proband_id}: {e}")
+        except ImportError as e:
+            err = {"sample_id": proband_id, "error_type": "import_error", "message": str(e)}
+            report_errors.append(err)
+            logger.error(f"Report import error for {proband_id}: {e}")
         except Exception as e:
-            logger.error(f"Report generation failed for {proband_id}: {e}")
+            # Unknown error — still capture so dashboard can surface it
+            err = {"sample_id": proband_id, "error_type": "unknown",
+                   "message": f"{type(e).__name__}: {e}"}
+            report_errors.append(err)
+            logger.exception(f"Report rendering failed for {proband_id}")
 
     result = {
         "stage": "06_report_generation",
         "reports_generated": len(reports_generated),
         "report_paths": reports_generated,
+        "report_errors": report_errors,
+        "n_errors": len(report_errors),
         "report_format": config.get("output", {}).get("report_format", "html"),
         "elapsed_seconds": round(time.time() - t0, 1),
     }
 
     with open(os.path.join(reports_dir, "report_summary.json"), "w") as f:
         json.dump(result, f, indent=2, default=str)
+
+    # Separate errors file the dashboard reads on /api/reports
+    if report_errors:
+        with open(os.path.join(reports_dir, "report_errors.json"), "w") as f:
+            json.dump({"errors": report_errors}, f, indent=2)
+    else:
+        # Remove a stale errors file from a prior failed run so the
+        # Reports tab doesn't keep showing a red banner after a fix.
+        stale = os.path.join(reports_dir, "report_errors.json")
+        if os.path.exists(stale):
+            os.unlink(stale)
 
     print(f"\n{'='*60}")
     print(f"Stage 6 Complete: Report Generation")

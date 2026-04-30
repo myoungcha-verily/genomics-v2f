@@ -12,6 +12,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 import threading
 import time
 
@@ -25,6 +26,10 @@ logger = logging.getLogger(__name__)
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(PROJECT_DIR, "config", "pipeline_config.yaml")
 DEMO_DIR = os.path.join(PROJECT_DIR, "demo")
+
+# Make pipeline.* importable regardless of cwd
+if PROJECT_DIR not in sys.path:
+    sys.path.insert(0, PROJECT_DIR)
 
 # Pipeline process tracking
 pipeline_process = None
@@ -292,10 +297,15 @@ def api_report(sample_id):
 
 @app.route("/api/reports")
 def api_list_reports():
-    """List generated reports."""
+    """List generated reports.
+
+    Also surfaces any per-sample report-generation errors written by stage 6
+    to reports/report_errors.json so the Reports tab can warn the user when
+    a run silently produced fewer reports than expected.
+    """
     reports_dir = os.path.join(PROJECT_DIR, "reports")
     if not os.path.exists(reports_dir):
-        return jsonify({"reports": []})
+        return jsonify({"reports": [], "errors": []})
 
     reports = []
     for f in os.listdir(reports_dir):
@@ -309,7 +319,16 @@ def api_list_reports():
                 "modified": os.path.getmtime(path),
             })
 
-    return jsonify({"reports": reports})
+    errors = []
+    err_path = os.path.join(reports_dir, "report_errors.json")
+    if os.path.exists(err_path):
+        try:
+            with open(err_path) as fh:
+                errors = (json.load(fh) or {}).get("errors", [])
+        except Exception:
+            pass
+
+    return jsonify({"reports": reports, "errors": errors})
 
 
 @app.route("/api/gene_panels")
@@ -328,6 +347,34 @@ def api_gene_panels():
                     "gene_count": data.get("gene_count", 0),
                 })
     return jsonify({"panels": panels})
+
+
+@app.route("/api/phenotype/test", methods=["POST"])
+def api_phenotype_test():
+    """Probe whether the configured FHIR project + dataset are reachable.
+
+    Body (optional): {fhir_project, fhir_dataset, condition_table}.
+    If body is empty, reads values from the saved config.
+    """
+    body = request.get_json(silent=True) or {}
+    if "fhir_project" not in body or "fhir_dataset" not in body:
+        cfg = _load_config()
+        pheno = cfg.get("phenotype", {}) if cfg else {}
+        body.setdefault("fhir_project", pheno.get("fhir_project", ""))
+        body.setdefault("fhir_dataset", pheno.get("fhir_dataset", ""))
+        body.setdefault("condition_table", pheno.get("condition_table", "Condition"))
+
+    try:
+        from pipeline.utils.fhir_phenotype import test_fhir_connectivity
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"import failed: {e}"}), 500
+
+    result = test_fhir_connectivity(
+        body.get("fhir_project", ""),
+        body.get("fhir_dataset", ""),
+        body.get("condition_table", "Condition"),
+    )
+    return jsonify(result)
 
 
 @app.route("/api/demo/load", methods=["POST"])

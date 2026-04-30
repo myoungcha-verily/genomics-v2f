@@ -216,6 +216,10 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
       <label><input type="checkbox" id="w_phen_enabled"> Enable phenotype matching</label>
       <div class="field-row" style="margin-top:8px;"><label>FHIR project</label><input type="text" id="w_phen_project" placeholder="my-fhir-project"></div>
       <div class="field-row"><label>FHIR dataset</label><input type="text" id="w_phen_dataset" placeholder="fhir_dataset_id"></div>
+      <div style="margin-top:8px;">
+        <button class="btn btn-sm" onclick="testFhir('w')" type="button">Test connection</button>
+        <span id="w_phen_status" style="margin-left:10px;font-size:12px;"></span>
+      </div>
     </div>
 
     <div style="margin-top:18px;">
@@ -297,6 +301,9 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
 
 <!-- ===== REPORTS ===== -->
 <div id="tab-reports" class="tab-panel">
+  <div id="reportErrorsBanner" class="banner hidden" style="background:#ffebee;border-left-color:#d32f2f;">
+    <div class="msg" style="color:#b71c1c;"><strong>Report generation had errors.</strong> <span id="reportErrorsList"></span></div>
+  </div>
   <div class="card">
     <h3>Generated Reports</h3>
     <div id="reportList">Loading...</div>
@@ -369,6 +376,10 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
         <div class="field-row"><label>FHIR project</label><input type="text" id="s_phen_project"></div>
         <div class="field-row"><label>FHIR dataset</label><input type="text" id="s_phen_dataset"></div>
         <div class="field-row"><label>Phenotype boost factor</label><input type="number" step="0.1" id="s_phen_boost"></div>
+        <div style="padding-top:10px;">
+          <button class="btn btn-sm" onclick="testFhir('s')" type="button">Test FHIR connection</button>
+          <span id="s_phen_status" style="margin-left:10px;font-size:12px;"></span>
+        </div>
       </div>
     </details>
 
@@ -432,6 +443,40 @@ function showTab(name, evt) {
   if (name === 'reports') loadReports();
   if (name === 'settings') { loadSettings(); loadPanels(); }
   if (name === 'overview' || name === 'pipeline') refreshStatus();
+}
+
+// FHIR connectivity test (used by Setup wizard step 6 + Settings phenotype)
+function testFhir(scope) {
+  // scope is 'w' (wizard) or 's' (settings) — picks which input fields and status span
+  const projId = scope + '_phen_project';
+  const dsId = scope + '_phen_dataset';
+  const statusId = scope + '_phen_status';
+  const proj = document.getElementById(projId).value.trim();
+  const ds = document.getElementById(dsId).value.trim();
+  const el = document.getElementById(statusId);
+  if (!proj || !ds) {
+    el.textContent = 'Set FHIR project + dataset first';
+    el.style.color = '#d32f2f';
+    return;
+  }
+  el.textContent = 'Testing…';
+  el.style.color = '#666';
+  fetch('api/phenotype/test', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({fhir_project: proj, fhir_dataset: ds}),
+  }).then(r=>r.json()).then(data => {
+    if (data.ok) {
+      el.textContent = `✓ Connected (${data.latency_ms}ms)`;
+      el.style.color = '#2e7d32';
+    } else {
+      el.textContent = `✗ ${data.error || 'Connection failed'}`;
+      el.style.color = '#d32f2f';
+    }
+  }).catch(e => {
+    el.textContent = '✗ Network error';
+    el.style.color = '#d32f2f';
+  });
 }
 
 // First-run detection
@@ -646,6 +691,19 @@ function loadVariants(page) {
 // Reports
 function loadReports() {
   fetch('api/reports').then(r=>r.json()).then(data => {
+    // Errors banner
+    const errBanner = document.getElementById('reportErrorsBanner');
+    const errList = document.getElementById('reportErrorsList');
+    const errors = data.errors || [];
+    if (errors.length && errBanner && errList) {
+      errBanner.classList.remove('hidden');
+      errList.innerHTML = errors.map(e =>
+        `<div style="margin-top:4px;"><strong>${e.sample_id}</strong> &mdash; ${e.error_type}: ${(e.message||'').slice(0,200)}</div>`
+      ).join('');
+    } else if (errBanner) {
+      errBanner.classList.add('hidden');
+    }
+
     const el = document.getElementById('reportList');
     if (!data.reports.length) { el.innerHTML = '<p style="color:#999;">No reports generated. Run the pipeline first.</p>'; return; }
     el.innerHTML = data.reports.map(r =>

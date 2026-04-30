@@ -62,24 +62,30 @@ def extract_patient_phenotype(patient_id: str, config: dict) -> Dict:
         omim_diseases: list of matched OMIM diseases
         candidate_genes: list of genes associated with phenotype
         hpo_terms: list of HPO terms (if mappable)
+        status: 'disabled' | 'unconfigured' | 'failed' | 'ok' — distinguishes
+                quiet skip from real failure so the dashboard can surface it.
     """
     pheno_config = config.get("phenotype", {})
     if not pheno_config.get("enabled", False):
-        return _empty_phenotype(patient_id)
+        logger.info("Phenotype matching disabled in config (phenotype.enabled=false)")
+        return _empty_phenotype(patient_id, status="disabled")
 
     fhir_project = pheno_config.get("fhir_project", "")
     fhir_dataset = pheno_config.get("fhir_dataset", "")
 
     if not fhir_project or not fhir_dataset:
-        logger.warning("FHIR project/dataset not configured")
-        return _empty_phenotype(patient_id)
+        logger.warning(
+            "Phenotype enabled but FHIR project/dataset not configured — "
+            "set phenotype.fhir_project and phenotype.fhir_dataset to enable"
+        )
+        return _empty_phenotype(patient_id, status="unconfigured")
 
     try:
         from google.cloud import bigquery
         client = bigquery.Client()
     except Exception as e:
-        logger.warning(f"BigQuery client init failed: {e}")
-        return _empty_phenotype(patient_id)
+        logger.error(f"BigQuery client init failed (phenotype broken): {e}")
+        return _empty_phenotype(patient_id, status="failed", error=str(e))
 
     # Query conditions
     conditions = _query_conditions(client, patient_id, fhir_project,
@@ -115,6 +121,7 @@ def extract_patient_phenotype(patient_id: str, config: dict) -> Dict:
         "hpo_terms": [],  # Would need full HPO mapping
         "n_conditions": len(conditions),
         "n_candidate_genes": len(candidate_genes),
+        "status": "ok",
     }
 
 
@@ -194,8 +201,15 @@ def score_variant_phenotype_match(variant: dict,
     return 0.0
 
 
-def _empty_phenotype(patient_id: str) -> Dict:
-    """Return empty phenotype profile."""
+def _empty_phenotype(patient_id: str, status: str = "disabled",
+                      error: Optional[str] = None) -> Dict:
+    """Return empty phenotype profile.
+
+    `status` distinguishes:
+      - 'disabled' — phenotype.enabled=false in config (silent skip)
+      - 'unconfigured' — enabled but project/dataset missing
+      - 'failed' — enabled and configured but query/auth broke
+    """
     return {
         "patient_id": patient_id,
         "conditions": [],
@@ -205,4 +219,47 @@ def _empty_phenotype(patient_id: str) -> Dict:
         "hpo_terms": [],
         "n_conditions": 0,
         "n_candidate_genes": 0,
+        "status": status,
+        "error": error,
     }
+
+
+def test_fhir_connectivity(fhir_project: str, fhir_dataset: str,
+                            condition_table: str = "Condition") -> Dict:
+    """One-shot connectivity probe: SELECT 1 FROM <project>.<dataset>.Condition.
+
+    Returns {ok: bool, error: Optional[str], latency_ms: int, project, dataset, table}.
+    Used by the dashboard to surface configuration problems early instead of
+    letting stage 5 silently report 0 conditions.
+    """
+    import time
+    out = {
+        "project": fhir_project,
+        "dataset": fhir_dataset,
+        "table": condition_table,
+        "ok": False,
+        "error": None,
+        "latency_ms": 0,
+    }
+    if not fhir_project or not fhir_dataset:
+        out["error"] = "FHIR project and dataset must both be set"
+        return out
+    try:
+        from google.cloud import bigquery
+    except ImportError as e:
+        out["error"] = f"google-cloud-bigquery not installed: {e}"
+        return out
+
+    t0 = time.time()
+    try:
+        client = bigquery.Client()
+        query = f"SELECT 1 AS ok FROM `{fhir_project}.{fhir_dataset}.{condition_table}` LIMIT 1"
+        # Use dry run first to avoid running the actual query if syntax/access fails fast
+        job_config = bigquery.QueryJobConfig(dry_run=True, use_query_cache=False)
+        client.query(query, job_config=job_config).result()
+        out["ok"] = True
+    except Exception as e:
+        out["error"] = str(e)
+    finally:
+        out["latency_ms"] = int((time.time() - t0) * 1000)
+    return out
