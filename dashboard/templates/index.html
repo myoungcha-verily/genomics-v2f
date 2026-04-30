@@ -129,9 +129,13 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
 
 <!-- First-run banner -->
 <div id="firstRunBanner" class="banner hidden">
-  <div class="msg"><strong>No pipeline config detected.</strong> Open the <a href="#" onclick="showTab('setup'); return false;" style="color:#1565c0;font-weight:600;">Setup tab</a> to configure the pipeline before running it.</div>
-  <button class="btn btn-sm" onclick="document.getElementById('firstRunBanner').classList.add('hidden')">Dismiss</button>
+  <div class="msg"><strong>No pipeline config detected.</strong> Open the <a href="#" onclick="showTab('setup'); return false;" style="color:#1565c0;font-weight:600;">Setup tab</a> to configure the pipeline, or load bundled demo data to explore the full flow.</div>
+  <div>
+    <button class="btn btn-sm btn-primary" onclick="loadDemo()" style="background:#2e7d32;">Try with demo data</button>
+    <button class="btn btn-sm" onclick="document.getElementById('firstRunBanner').classList.add('hidden')" style="margin-left:6px;">Dismiss</button>
+  </div>
 </div>
+<div id="demoStatusToast" style="display:none;position:fixed;top:20px;right:20px;background:#2e7d32;color:#fff;padding:10px 18px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.2);z-index:1000;font-size:13px;"></div>
 
 <!-- ===== OVERVIEW ===== -->
 <div id="tab-overview" class="tab-panel active">
@@ -157,6 +161,12 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
 
 <!-- ===== SETUP ===== -->
 <div id="tab-setup" class="tab-panel">
+  <div class="card" style="border-left:4px solid #2e7d32;background:#f1f8e9;">
+    <h3 style="color:#1b5e20;">New here? Try the bundled demo</h3>
+    <p style="color:#33691e;margin:6px 0 12px;">Loads a small synthetic VCF (10 variants across BRCA1, TP53, MYH7, PTEN, BRCA2) plus pre-computed pipeline outputs so every tab populates instantly. No external data needed.</p>
+    <button class="btn btn-primary" onclick="loadDemo()" style="background:#2e7d32;">Load demo data</button>
+    <span id="demoSetupStatus" style="margin-left:14px;font-size:13px;color:#33691e;"></span>
+  </div>
   <div class="card">
     <h3>Pipeline Setup Wizard</h3>
     <p style="color:#666;margin-bottom:15px;">Configure the V2F pipeline in 6 steps. All values are written to <code>config/pipeline_config.yaml</code> when you click Save.</p>
@@ -293,6 +303,13 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
 
 <!-- ===== SETTINGS ===== -->
 <div id="tab-settings" class="tab-panel">
+  <div class="card" style="border-left:4px solid #f9a825;background:#fff8e1;">
+    <h3 style="color:#e65100;">Demo data controls</h3>
+    <p style="color:#5d4037;margin:6px 0 12px;">Load the bundled demo to populate every tab with synthetic data, or reset to the empty first-run state for a clean walkthrough.</p>
+    <button class="btn btn-primary" onclick="loadDemo()" style="background:#2e7d32;">Load demo data</button>
+    <button class="btn btn-sm" onclick="resetDemo()" style="margin-left:8px;background:#d32f2f;color:#fff;">Reset to first-run state</button>
+    <span id="demoResetStatus" style="margin-left:14px;font-size:13px;"></span>
+  </div>
   <div class="card">
     <h3>Pipeline Configuration</h3>
     <p style="color:#666;margin-bottom:12px;">Every key in <code>config/pipeline_config.yaml</code> is editable below. Click a section to expand.</p>
@@ -417,6 +434,57 @@ function checkFirstRun() {
     const empty = !cfg || Object.keys(cfg).length === 0 || !cfg.input || !cfg.input.adapter;
     document.getElementById('firstRunBanner').classList.toggle('hidden', !empty);
   }).catch(()=>{});
+}
+
+// ===== Demo data controls =====
+function _toast(msg, color) {
+  const el = document.getElementById('demoStatusToast');
+  el.textContent = msg;
+  el.style.background = color || '#2e7d32';
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function loadDemo() {
+  const setupEl = document.getElementById('demoSetupStatus');
+  const resetEl = document.getElementById('demoResetStatus');
+  if (setupEl) { setupEl.textContent = 'Loading…'; setupEl.style.color = '#33691e'; }
+  if (resetEl) { resetEl.textContent = 'Loading…'; resetEl.style.color = '#33691e'; }
+  fetch('api/demo/load', {method:'POST'}).then(r=>r.json()).then(data => {
+    if (data.error) {
+      _toast('Demo load failed: ' + data.error, '#d32f2f');
+      if (setupEl) { setupEl.textContent = 'Failed: ' + data.error; setupEl.style.color = '#d32f2f'; }
+      return;
+    }
+    _toast(`Demo loaded — ${data.variants} variants ready in Variants tab`);
+    if (setupEl) setupEl.textContent = `Loaded ${data.variants} variants. Click Variants or Reports to explore.`;
+    if (resetEl) resetEl.textContent = `Loaded ${data.variants} variants.`;
+    document.getElementById('firstRunBanner').classList.add('hidden');
+    refreshStatus();
+    loadConfig();
+    loadSettings();
+    loadSetup();
+  }).catch(e => {
+    _toast('Demo load failed', '#d32f2f');
+    if (setupEl) { setupEl.textContent = 'Network error'; setupEl.style.color = '#d32f2f'; }
+  });
+}
+
+function resetDemo() {
+  if (!confirm('Reset to first-run state? This deletes data/, reports/, eval/, logs/ and your pipeline_config.yaml.')) return;
+  const el = document.getElementById('demoResetStatus');
+  if (el) { el.textContent = 'Resetting…'; el.style.color = '#666'; }
+  fetch('api/demo/reset', {method:'POST'}).then(r=>r.json()).then(data => {
+    _toast('Reset complete — refresh the page for a clean view');
+    if (el) { el.textContent = 'Reset complete.'; el.style.color = '#2e7d32'; }
+    checkFirstRun();
+    refreshStatus();
+    loadConfig();
+    loadSettings();
+  }).catch(e => {
+    _toast('Reset failed', '#d32f2f');
+    if (el) { el.textContent = 'Reset failed'; el.style.color = '#d32f2f'; }
+  });
 }
 
 // Status polling

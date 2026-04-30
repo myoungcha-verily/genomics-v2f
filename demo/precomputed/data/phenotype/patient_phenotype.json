@@ -1,0 +1,26 @@
+{
+  "patient_id": "DEMO_PROBAND",
+  "conditions": [
+    {
+      "icd10": "Z80.41",
+      "display": "Family history of malignant neoplasm of ovary"
+    },
+    {
+      "icd10": "Z80.3",
+      "display": "Family history of malignant neoplasm of breast"
+    }
+  ],
+  "candidate_genes": [
+    "BRCA1",
+    "BRCA2",
+    "TP53",
+    "PTEN",
+    "PALB2",
+    "CHEK2",
+    "ATM",
+    "RAD51C"
+  ],
+  "n_variants_phenotype_matching": 4,
+  "phenotype_match_threshold": 0.5,
+  "generated_at": "2026-04-30T22:13:15.782293Z"
+}

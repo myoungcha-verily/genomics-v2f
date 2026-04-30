@@ -1,0 +1,7 @@
+{
+  "n_variants": 10,
+  "n_pathogenic_concordant": 2,
+  "n_benign_concordant": 5,
+  "concordance_rate": 0.95,
+  "demo": true
+}

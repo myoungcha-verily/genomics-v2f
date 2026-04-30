@@ -1,0 +1,48 @@
+# Demo configuration for V2F Reporter
+# Auto-installed by /api/demo/load — safe to overwrite.
+input:
+  adapter: single_sample
+  vcf_path: data/vcf/proband.vcf.gz
+  reference_genome: GRCh38
+
+annotation:
+  vep_mode: skip   # demo skips VEP; precomputed parquet has annotations baked in
+  thresholds:
+    cadd_pathogenic: 25.3
+    revel_pathogenic: 0.644
+    spliceai_pathogenic: 0.2
+    alphamissense_pathogenic: 0.564
+
+databases:
+  clinvar:
+    bq_table: bigquery-public-data.human_variant_annotation.clinvar_hg38
+  gnomad:
+    bq_table: bigquery-public-data.gnomAD.v4_1_0_exomes__variant_results
+
+acmg:
+  ba1_threshold: 0.05
+  bs1_threshold: 0.01
+  pm2_threshold: 0.0001
+  enable_pvs1: true
+  enable_population_criteria: true
+  enable_computational: true
+  enable_clinical_data: true
+  enable_segregation: false
+  enable_functional: false
+
+phenotype:
+  enabled: true
+  fhir_project: ""   # empty → use bundled demo/germline/phenotype.json
+  fhir_dataset: ""
+  boost_factor: 2.0
+
+output:
+  gcs_bucket: ""
+  gcs_prefix: genomics-v2f/
+  data_dir: data
+  reports_dir: reports
+  report_format: html
+
+pipeline:
+  parallel_workers: 4
+  log_level: INFO

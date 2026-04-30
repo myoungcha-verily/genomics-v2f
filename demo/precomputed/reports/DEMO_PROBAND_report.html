@@ -1,0 +1,44 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>V2F Report — DEMO_PROBAND</title>
+<style>
+body{font-family:'Segoe UI',sans-serif;max-width:1100px;margin:24px auto;padding:0 20px;color:#333}
+h1{color:#1565c0;border-bottom:2px solid #1565c0;padding-bottom:8px}
+h2{color:#0d47a1;margin-top:28px}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid #eee;text-align:left}
+th{background:#f5f5f5}
+.banner{background:#fff8e1;border-left:4px solid #f9a825;padding:12px 18px;margin:20px 0;border-radius:4px;color:#5d4037}
+.summary{display:flex;gap:14px;margin-top:14px}
+.card{flex:1;background:#f8f9fa;border-radius:6px;padding:14px;text-align:center}
+.card .v{font-size:24px;font-weight:700;color:#1565c0}
+.card .l{font-size:11px;text-transform:uppercase;color:#888;letter-spacing:1px}
+</style></head><body>
+<h1>V2F Variant Interpretation Report — DEMO_PROBAND</h1>
+<div class="banner"><strong>Demo report.</strong> Generated from synthetic data — not for clinical use.</div>
+
+<h2>Patient Summary</h2>
+<p><strong>Patient ID:</strong> DEMO_PROBAND<br>
+<strong>Reference:</strong> GRCh38 &middot; <strong>Adapter:</strong> single_sample &middot;
+<strong>Phenotype:</strong> HBOC (Z80.3, Z80.41)</p>
+
+<div class="summary">
+  <div class="card"><div class="v">2</div><div class="l">Pathogenic</div></div>
+  <div class="card"><div class="v">1</div><div class="l">Likely path.</div></div>
+  <div class="card"><div class="v">1</div><div class="l">VUS</div></div>
+  <div class="card"><div class="v">2</div><div class="l">Likely benign</div></div>
+  <div class="card"><div class="v">4</div><div class="l">Benign</div></div>
+</div>
+
+<h2>Classified Variants</h2>
+<table>
+<thead><tr><th>Gene</th><th>Position</th><th>Change</th><th>HGVS</th><th>Classification</th><th>ACMG criteria</th><th>gnomAD AF</th><th>CADD</th><th>Phenotype score</th></tr></thead>
+<tbody>
+<tr><td><strong>BRCA1</strong></td><td>chr17:43106478</td><td>T&gt;G</td><td>c.181T>G</td><td>Pathogenic</td><td>PVS1, PM2, PP3, PP5</td><td>5.00e-06</td><td>28.4</td><td>0.95</td></tr><tr><td><strong>TP53</strong></td><td>chr17:7674220</td><td>C&gt;T</td><td>c.524G>A</td><td>Pathogenic</td><td>PS1, PM1, PM2, PP3, PP5</td><td>3.00e-06</td><td>32.0</td><td>0.78</td></tr><tr><td><strong>MYH7</strong></td><td>chr14:23427594</td><td>G&gt;A</td><td>c.4954G>A</td><td>Likely pathogenic</td><td>PM1, PM2, PP3, PP5</td><td>0.00e+00</td><td>26.7</td><td>0.05</td></tr><tr><td><strong>PTEN</strong></td><td>chr10:87864458</td><td>C&gt;T</td><td>c.493G>A</td><td>VUS</td><td>PM2, PP3</td><td>1.00e-04</td><td>22.1</td><td>0.62</td></tr><tr><td><strong>PTEN</strong></td><td>chr10:87894077</td><td>G&gt;A</td><td>3' UTR</td><td>Likely benign</td><td>BS1, BP6</td><td>8.50e-02</td><td>4.4</td><td>0.05</td></tr><tr><td><strong>BRCA2</strong></td><td>chr13:32340301</td><td>A&gt;G</td><td>c.7242A>G</td><td>Likely benign</td><td>BS1, BP4, BP6</td><td>5.80e-02</td><td>8.2</td><td>0.00</td></tr><tr><td><strong>BRCA1</strong></td><td>chr17:43124027</td><td>G&gt;A</td><td>c.4837A>G (synonymous)</td><td>Benign</td><td>BA1, BP4, BP6, BP7</td><td>7.20e-02</td><td>5.1</td><td>0.00</td></tr><tr><td><strong>TP53</strong></td><td>chr17:7676154</td><td>G&gt;C</td><td>intronic</td><td>Benign</td><td>BA1, BP4</td><td>1.30e-01</td><td>2.3</td><td>0.00</td></tr><tr><td><strong>HBB</strong></td><td>chr11:5226750</td><td>T&gt;C</td><td>intergenic</td><td>Benign</td><td>BA1</td><td>2.10e-01</td><td>1.1</td><td>0.00</td></tr><tr><td><strong>MYH7</strong></td><td>chr14:23429834</td><td>C&gt;T</td><td>intronic</td><td>Benign</td><td>BA1</td><td>9.20e-02</td><td>3.0</td><td>0.00</td></tr>
+</tbody>
+</table>
+
+<h2>Notes</h2>
+<p>This report was generated from V2F demo data on 2026-04-30.
+Phenotype score reflects match between the patient's diagnosed conditions
+(BRCA1/2-related cancer family history) and each variant's gene.</p>
+</body></html>

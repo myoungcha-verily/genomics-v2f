@@ -10,6 +10,7 @@ All fetch() calls use RELATIVE paths for Workbench proxy compatibility.
 import json
 import logging
 import os
+import shutil
 import subprocess
 import threading
 import time
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(PROJECT_DIR, "config", "pipeline_config.yaml")
+DEMO_DIR = os.path.join(PROJECT_DIR, "demo")
 
 # Pipeline process tracking
 pipeline_process = None
@@ -326,6 +328,74 @@ def api_gene_panels():
                     "gene_count": data.get("gene_count", 0),
                 })
     return jsonify({"panels": panels})
+
+
+@app.route("/api/demo/load", methods=["POST"])
+def api_demo_load():
+    """Copy bundled demo VCF + precomputed outputs into the live data dirs.
+
+    After this returns, every dashboard tab has populated content the user
+    can click through — no pipeline run required.
+    """
+    germline_dir = os.path.join(DEMO_DIR, "germline")
+    precomputed_dir = os.path.join(DEMO_DIR, "precomputed")
+
+    if not os.path.isdir(germline_dir) or not os.path.isdir(precomputed_dir):
+        return jsonify({"error": "Demo data not bundled in this build"}), 500
+
+    # 1. Copy demo VCF + tabix index into data/vcf/
+    vcf_dst_dir = os.path.join(PROJECT_DIR, "data", "vcf")
+    os.makedirs(vcf_dst_dir, exist_ok=True)
+    for fname in ("proband.vcf.gz", "proband.vcf.gz.tbi"):
+        src = os.path.join(germline_dir, fname)
+        if os.path.exists(src):
+            shutil.copy2(src, os.path.join(vcf_dst_dir, fname))
+
+    # 2. Install demo config
+    demo_config = os.path.join(germline_dir, "config.yaml")
+    if os.path.exists(demo_config):
+        os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+        shutil.copy2(demo_config, CONFIG_PATH)
+
+    # 3. Copy precomputed pipeline outputs into the live data/ + reports/ + eval/ trees
+    for sub in ("data", "reports", "eval"):
+        src = os.path.join(precomputed_dir, sub)
+        if os.path.isdir(src):
+            dst = os.path.join(PROJECT_DIR, sub)
+            for root, _, files in os.walk(src):
+                rel = os.path.relpath(root, src)
+                tgt = os.path.join(dst, rel) if rel != "." else dst
+                os.makedirs(tgt, exist_ok=True)
+                for f in files:
+                    shutil.copy2(os.path.join(root, f), os.path.join(tgt, f))
+
+    n_variants = 0
+    pq = os.path.join(PROJECT_DIR, "data", "classified", "acmg_results.parquet")
+    if os.path.exists(pq):
+        try:
+            n_variants = len(pd.read_parquet(pq))
+        except Exception:
+            n_variants = 0
+
+    return jsonify({
+        "loaded": True,
+        "vcf": "data/vcf/proband.vcf.gz",
+        "config": "config/pipeline_config.yaml",
+        "variants": n_variants,
+    })
+
+
+@app.route("/api/demo/reset", methods=["POST"])
+def api_demo_reset():
+    """Wipe data/, reports/, eval/, logs/ and pipeline_config.yaml — reverts
+    to first-run state for repeatable demos."""
+    for sub in ("data", "reports", "eval", "logs"):
+        path = os.path.join(PROJECT_DIR, sub)
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+    if os.path.exists(CONFIG_PATH):
+        os.unlink(CONFIG_PATH)
+    return jsonify({"reset": True})
 
 
 if __name__ == "__main__":

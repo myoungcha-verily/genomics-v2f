@@ -1,0 +1,33 @@
+{
+  "patient_id": "DEMO_PROBAND",
+  "source": "Synthetic FHIR Condition payload for V2F demo",
+  "conditions": [
+    {
+      "icd10": "Z80.41",
+      "display": "Family history of malignant neoplasm of ovary",
+      "snomed": "275937001",
+      "onset": "2025-09"
+    },
+    {
+      "icd10": "Z80.3",
+      "display": "Family history of malignant neoplasm of breast",
+      "snomed": "275938006",
+      "onset": "2025-09"
+    }
+  ],
+  "candidate_genes": [
+    "BRCA1",
+    "BRCA2",
+    "TP53",
+    "PTEN",
+    "PALB2",
+    "CHEK2",
+    "ATM",
+    "RAD51C"
+  ],
+  "hpo_terms": [
+    "HP:0003002",
+    "HP:0100615"
+  ],
+  "notes": "Hereditary breast and ovarian cancer (HBOC) syndrome workup. Phenotype matches BRCA1, BRCA2, TP53, PTEN \u2014 drives PP4 and phenotype boost for matching variants."
+}

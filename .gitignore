@@ -1,8 +1,9 @@
-# Data directories (large files)
-data/
-reports/
-eval/
-logs/
+# Pipeline output directories at repo root only (large files).
+# Anchored with leading slash so demo/precomputed/data/ etc. are NOT ignored.
+/data/
+/reports/
+/eval/
+/logs/
 
 # VEP cache
 vep_cache/
