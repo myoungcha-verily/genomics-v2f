@@ -1,0 +1,35 @@
+# Example: Single-sample whole-exome sequencing
+input:
+  adapter: single_sample
+  vcf_path: "data/vcf/NA12878.vcf.gz"
+  reference_genome: GRCh38
+
+annotation:
+  vep_mode: docker
+  enable_cadd: true
+  enable_revel: true
+  enable_spliceai: true
+  enable_alphamissense: true
+
+databases:
+  clinvar:
+    bq_table: "bigquery-public-data.human_variant_annotation.clinvar_hg38"
+  gnomad:
+    bq_table: "bigquery-public-data.gnomAD.v4_1_0_exomes__variant_results"
+
+acmg:
+  ba1_threshold: 0.05
+  bs1_threshold: 0.01
+  pm2_threshold: 0.0001
+
+phenotype:
+  enabled: false
+
+output:
+  report_format: html
+  include_vus: true
+  max_vus_in_report: 50
+
+pipeline:
+  stages: "all"
+  log_level: INFO

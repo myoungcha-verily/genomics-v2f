@@ -1,0 +1,249 @@
+{
+  "criteria": {
+    "PVS1": {
+      "category": "pathogenic",
+      "strength": "very_strong",
+      "description": "Null variant in a gene where loss-of-function is a known mechanism of disease",
+      "automatable": true,
+      "data_sources": ["consequence_type", "clingen_lof_genes"],
+      "applicable_consequences": ["frameshift_variant", "stop_gained", "splice_donor_variant", "splice_acceptor_variant", "start_lost", "transcript_ablation"]
+    },
+    "PS1": {
+      "category": "pathogenic",
+      "strength": "strong",
+      "description": "Same amino acid change as a previously established pathogenic variant",
+      "automatable": true,
+      "data_sources": ["clinvar"]
+    },
+    "PS2": {
+      "category": "pathogenic",
+      "strength": "strong",
+      "description": "De novo (confirmed) in a patient with disease and no family history",
+      "automatable": true,
+      "data_sources": ["trio_analysis"],
+      "requires_adapter": "trio"
+    },
+    "PS3": {
+      "category": "pathogenic",
+      "strength": "strong",
+      "description": "Well-established functional studies supportive of a damaging effect",
+      "automatable": false,
+      "data_sources": ["manual_curation"]
+    },
+    "PS4": {
+      "category": "pathogenic",
+      "strength": "strong",
+      "description": "Prevalence in affected individuals significantly increased vs controls",
+      "automatable": false,
+      "data_sources": ["case_control_studies"]
+    },
+    "PM1": {
+      "category": "pathogenic",
+      "strength": "moderate",
+      "description": "Located in a mutational hot spot and/or critical functional domain",
+      "automatable": true,
+      "data_sources": ["uniprot_domains", "clinvar_hotspots"]
+    },
+    "PM2": {
+      "category": "pathogenic",
+      "strength": "supporting",
+      "description": "Absent from controls or extremely low frequency in gnomAD",
+      "automatable": true,
+      "data_sources": ["gnomad"],
+      "note": "Downgraded to supporting per ClinGen SVI 2020"
+    },
+    "PM3": {
+      "category": "pathogenic",
+      "strength": "moderate",
+      "description": "Detected in trans with a pathogenic variant for recessive disorders",
+      "automatable": true,
+      "data_sources": ["trio_analysis", "phasing"],
+      "requires_adapter": "trio"
+    },
+    "PM4": {
+      "category": "pathogenic",
+      "strength": "moderate",
+      "description": "Protein length changes from in-frame indels or stop-loss variants",
+      "automatable": true,
+      "data_sources": ["consequence_type"],
+      "applicable_consequences": ["inframe_insertion", "inframe_deletion", "stop_lost"]
+    },
+    "PM5": {
+      "category": "pathogenic",
+      "strength": "moderate",
+      "description": "Novel missense at a position where a different pathogenic missense exists",
+      "automatable": true,
+      "data_sources": ["clinvar"]
+    },
+    "PM6": {
+      "category": "pathogenic",
+      "strength": "moderate",
+      "description": "Assumed de novo without confirmation of paternity/maternity",
+      "automatable": true,
+      "data_sources": ["trio_analysis"],
+      "requires_adapter": "trio"
+    },
+    "PP1": {
+      "category": "pathogenic",
+      "strength": "supporting",
+      "description": "Co-segregation with disease in multiple affected family members",
+      "automatable": false,
+      "data_sources": ["family_studies"]
+    },
+    "PP2": {
+      "category": "pathogenic",
+      "strength": "supporting",
+      "description": "Missense in gene with low rate of benign missense and pathogenic missenses are common",
+      "automatable": true,
+      "data_sources": ["clinvar", "gnomad", "gene_constraint"]
+    },
+    "PP3": {
+      "category": "pathogenic",
+      "strength": "supporting",
+      "description": "Multiple lines of computational evidence support a deleterious effect",
+      "automatable": true,
+      "data_sources": ["cadd", "revel", "spliceai"],
+      "thresholds": {
+        "cadd": 25.3,
+        "revel": 0.644,
+        "spliceai": 0.2
+      }
+    },
+    "PP4": {
+      "category": "pathogenic",
+      "strength": "supporting",
+      "description": "Patient phenotype highly specific for a disease with a single genetic etiology",
+      "automatable": true,
+      "data_sources": ["phenotype_match"]
+    },
+    "PP5": {
+      "category": "pathogenic",
+      "strength": "supporting",
+      "description": "Reputable source reports variant as pathogenic",
+      "automatable": true,
+      "data_sources": ["clinvar"],
+      "note": "ClinVar P/LP with >= 2 review stars"
+    },
+    "BA1": {
+      "category": "benign",
+      "strength": "standalone",
+      "description": "Allele frequency > 5% in gnomAD",
+      "automatable": true,
+      "data_sources": ["gnomad"],
+      "threshold": 0.05
+    },
+    "BS1": {
+      "category": "benign",
+      "strength": "strong",
+      "description": "Allele frequency greater than expected for disorder",
+      "automatable": true,
+      "data_sources": ["gnomad"],
+      "threshold": 0.01
+    },
+    "BS2": {
+      "category": "benign",
+      "strength": "strong",
+      "description": "Observed in a healthy adult individual for a fully penetrant early-onset condition",
+      "automatable": false,
+      "data_sources": ["gnomad_homozygotes", "phenotype"]
+    },
+    "BS3": {
+      "category": "benign",
+      "strength": "strong",
+      "description": "Well-established functional studies show no damaging effect",
+      "automatable": false,
+      "data_sources": ["manual_curation"]
+    },
+    "BS4": {
+      "category": "benign",
+      "strength": "strong",
+      "description": "Lack of segregation in affected members of a family",
+      "automatable": false,
+      "data_sources": ["family_studies"]
+    },
+    "BP1": {
+      "category": "benign",
+      "strength": "supporting",
+      "description": "Missense in gene where only truncating variants cause disease",
+      "automatable": true,
+      "data_sources": ["clingen_lof_genes", "consequence_type"]
+    },
+    "BP2": {
+      "category": "benign",
+      "strength": "supporting",
+      "description": "Observed in trans with a pathogenic variant for dominant disorder, or in cis with pathogenic for any",
+      "automatable": true,
+      "data_sources": ["trio_analysis", "phasing"]
+    },
+    "BP3": {
+      "category": "benign",
+      "strength": "supporting",
+      "description": "In-frame indel in a repetitive region without known function",
+      "automatable": true,
+      "data_sources": ["repeat_regions", "consequence_type"]
+    },
+    "BP4": {
+      "category": "benign",
+      "strength": "supporting",
+      "description": "Multiple lines of computational evidence suggest no impact on gene or gene product",
+      "automatable": true,
+      "data_sources": ["cadd", "revel", "spliceai"],
+      "thresholds": {
+        "cadd": 15.0,
+        "revel": 0.290,
+        "spliceai": 0.1
+      }
+    },
+    "BP5": {
+      "category": "benign",
+      "strength": "supporting",
+      "description": "Variant found in a case with an alternate molecular basis for disease",
+      "automatable": false,
+      "data_sources": ["clinical_data"]
+    },
+    "BP6": {
+      "category": "benign",
+      "strength": "supporting",
+      "description": "Reputable source reports variant as benign",
+      "automatable": true,
+      "data_sources": ["clinvar"],
+      "note": "ClinVar B/LB with >= 2 review stars"
+    },
+    "BP7": {
+      "category": "benign",
+      "strength": "supporting",
+      "description": "Synonymous variant with no predicted splicing impact",
+      "automatable": true,
+      "data_sources": ["consequence_type", "spliceai"],
+      "applicable_consequences": ["synonymous_variant"]
+    }
+  },
+  "combination_rules": {
+    "pathogenic": [
+      {"description": "1 Very Strong AND >= 1 Strong", "very_strong": 1, "strong": 1},
+      {"description": "1 Very Strong AND >= 2 Moderate", "very_strong": 1, "moderate": 2},
+      {"description": "1 Very Strong AND 1 Moderate AND 1 Supporting", "very_strong": 1, "moderate": 1, "supporting": 1},
+      {"description": "1 Very Strong AND >= 2 Supporting", "very_strong": 1, "supporting": 2},
+      {"description": ">= 2 Strong", "strong": 2},
+      {"description": "1 Strong AND >= 3 Moderate", "strong": 1, "moderate": 3},
+      {"description": "1 Strong AND 2 Moderate AND >= 2 Supporting", "strong": 1, "moderate": 2, "supporting": 2},
+      {"description": "1 Strong AND 1 Moderate AND >= 4 Supporting", "strong": 1, "moderate": 1, "supporting": 4}
+    ],
+    "likely_pathogenic": [
+      {"description": "1 Very Strong AND 1 Moderate", "very_strong": 1, "moderate": 1},
+      {"description": "1 Strong AND 1-2 Moderate", "strong": 1, "moderate": 1},
+      {"description": "1 Strong AND >= 2 Supporting", "strong": 1, "supporting": 2},
+      {"description": ">= 3 Moderate", "moderate": 3},
+      {"description": "2 Moderate AND >= 2 Supporting", "moderate": 2, "supporting": 2},
+      {"description": "1 Moderate AND >= 4 Supporting", "moderate": 1, "supporting": 4}
+    ],
+    "benign": [
+      {"description": "1 Standalone", "standalone": 1},
+      {"description": ">= 2 Strong", "strong": 2}
+    ],
+    "likely_benign": [
+      {"description": "1 Strong AND 1 Supporting", "strong": 1, "supporting": 1},
+      {"description": ">= 2 Supporting", "supporting": 2}
+    ]
+  }
+}

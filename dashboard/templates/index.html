@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V2F Reporter Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#333}
+.header{background:linear-gradient(135deg,#1565c0,#0d47a1);color:#fff;padding:15px 30px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:20px;font-weight:600}
+.header .status-badge{padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600}
+.status-idle{background:rgba(255,255,255,0.2)}
+.status-running{background:#4caf50;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.7}}
+
+/* Tabs */
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0e0;padding:0 20px}
+.tab{padding:12px 20px;cursor:pointer;font-size:14px;font-weight:500;color:#666;border-bottom:3px solid transparent;transition:all 0.2s}
+.tab:hover{color:#1565c0}
+.tab.active{color:#1565c0;border-bottom-color:#1565c0}
+
+/* Content */
+.content{max-width:1400px;margin:20px auto;padding:0 20px}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Cards */
+.card{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);padding:20px;margin:15px 0}
+.card h3{color:#1565c0;margin-bottom:10px;font-size:16px}
+.grid{display:grid;gap:15px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+.grid-5{grid-template-columns:repeat(5,1fr)}
+@media(max-width:768px){.grid-2,.grid-3,.grid-5{grid-template-columns:1fr}}
+
+/* Summary cards */
+.stat-card{text-align:center;padding:15px;border-radius:8px;color:#fff}
+.stat-card .value{font-size:28px;font-weight:700}
+.stat-card .label{font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.9}
+.bg-p{background:#d32f2f}.bg-lp{background:#e64a19}.bg-vus{background:#f9a825;color:#333}.bg-lb{background:#66bb6a}.bg-b{background:#2e7d32}
+
+/* Stage progress */
+.stage{display:flex;align-items:center;padding:10px;border-radius:6px;margin:5px 0}
+.stage.complete{background:#e8f5e9}
+.stage.pending{background:#f5f5f5}
+.stage .num{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-right:12px}
+.stage.complete .num{background:#4caf50;color:#fff}
+.stage.pending .num{background:#bdbdbd;color:#fff}
+.stage .name{flex:1;font-weight:500}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f5f5f5;padding:10px;text-align:left;font-weight:600;border-bottom:2px solid #e0e0e0;position:sticky;top:0}
+td{padding:8px 10px;border-bottom:1px solid #f0f0f0}
+tr:hover{background:#f8f9fa}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;color:#fff}
+.badge-P{background:#d32f2f}.badge-LP{background:#e64a19}.badge-VUS{background:#f9a825;color:#333}
+.badge-LB{background:#66bb6a}.badge-B{background:#2e7d32}
+
+/* Buttons */
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;transition:all 0.2s}
+.btn-primary{background:#1565c0;color:#fff}.btn-primary:hover{background:#0d47a1}
+.btn-danger{background:#d32f2f;color:#fff}.btn-danger:hover{background:#b71c1c}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* Log */
+.log-box{background:#1a1a2e;color:#e0e0e0;padding:15px;border-radius:6px;font-family:'Fira Code',monospace;font-size:12px;max-height:400px;overflow-y:auto;white-space:pre-wrap}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:15px}
+.filter-bar select,.filter-bar input{padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px}
+
+/* Upload */
+.upload-zone{border:2px dashed #bbb;border-radius:8px;padding:40px;text-align:center;cursor:pointer;transition:all 0.2s}
+.upload-zone:hover{border-color:#1565c0;background:#e3f2fd}
+.upload-zone.dragover{border-color:#4caf50;background:#e8f5e9}
+
+/* Config editor */
+.config-editor{width:100%;min-height:400px;font-family:monospace;font-size:13px;padding:15px;border:1px solid #ccc;border-radius:6px}
+
+/* First-run banner */
+.banner{background:#fff8e1;border-left:4px solid #f9a825;padding:12px 18px;margin:15px 0;border-radius:4px;display:flex;align-items:center;justify-content:space-between}
+.banner.hidden{display:none}
+.banner .msg{color:#5d4037}
+.banner .msg strong{color:#e65100}
+
+/* Setup wizard */
+.wizard-step{background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:18px;margin-bottom:14px}
+.wizard-step h4{color:#1565c0;margin-bottom:6px;font-size:14px}
+.wizard-step .help{color:#888;font-size:12px;margin-bottom:10px}
+.wizard-step label{display:block;padding:4px 0;font-size:13px;cursor:pointer}
+.wizard-step label input[type=radio],.wizard-step label input[type=checkbox]{margin-right:8px}
+.wizard-step input[type=text]{width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;margin-top:4px}
+.wizard-step .step-num{display:inline-block;background:#1565c0;color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-size:12px;font-weight:700;margin-right:8px}
+
+/* Settings sections */
+details.setting-section{background:#fff;border:1px solid #e0e0e0;border-radius:6px;margin-bottom:10px}
+details.setting-section summary{padding:12px 16px;cursor:pointer;font-weight:600;color:#1565c0;font-size:14px;list-style:none}
+details.setting-section summary::-webkit-details-marker{display:none}
+details.setting-section summary::before{content:"▶ ";font-size:10px;color:#888}
+details.setting-section[open] summary::before{content:"▼ "}
+details.setting-section .section-body{padding:12px 18px 18px;border-top:1px solid #f0f0f0}
+.field-row{display:grid;grid-template-columns:200px 1fr;gap:10px;align-items:center;padding:6px 0;font-size:13px}
+.field-row label{color:#555;font-weight:500}
+.field-row input[type=text],.field-row input[type=number]{padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;width:100%}
+.field-row select{padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px}
+@media(max-width:768px){.field-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Variant-to-Function Reporter</h1>
+  <span id="statusBadge" class="status-badge status-idle">Idle</span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('overview', event)">Overview</div>
+  <div class="tab" onclick="showTab('setup', event)">Setup</div>
+  <div class="tab" onclick="showTab('upload', event)">Upload</div>
+  <div class="tab" onclick="showTab('pipeline', event)">Pipeline</div>
+  <div class="tab" onclick="showTab('variants', event)">Variants</div>
+  <div class="tab" onclick="showTab('reports', event)">Reports</div>
+  <div class="tab" onclick="showTab('settings', event)">Settings</div>
+</div>
+
+<div class="content">
+
+<!-- First-run banner -->
+<div id="firstRunBanner" class="banner hidden">
+  <div class="msg"><strong>No pipeline config detected.</strong> Open the <a href="#" onclick="showTab('setup'); return false;" style="color:#1565c0;font-weight:600;">Setup tab</a> to configure the pipeline before running it.</div>
+  <button class="btn btn-sm" onclick="document.getElementById('firstRunBanner').classList.add('hidden')">Dismiss</button>
+</div>
+
+<!-- ===== OVERVIEW ===== -->
+<div id="tab-overview" class="tab-panel active">
+  <div class="card">
+    <h3>Pipeline Architecture</h3>
+    <p style="margin-bottom:15px;color:#666;">7-stage pipeline from VCF to clinical variant report. No GPU required.</p>
+    <div id="stageList"></div>
+  </div>
+  <div class="card">
+    <h3>Reference Databases</h3>
+    <div id="dbStatus">Loading...</div>
+  </div>
+  <div class="card">
+    <h3>Quick Start</h3>
+    <ol style="margin-left:20px;line-height:2">
+      <li>Upload a VCF file or set the path in Settings</li>
+      <li>Configure annotation sources and ACMG criteria</li>
+      <li>Run the pipeline from the Pipeline tab</li>
+      <li>View classified variants and download reports</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ===== SETUP ===== -->
+<div id="tab-setup" class="tab-panel">
+  <div class="card">
+    <h3>Pipeline Setup Wizard</h3>
+    <p style="color:#666;margin-bottom:15px;">Configure the V2F pipeline in 6 steps. All values are written to <code>config/pipeline_config.yaml</code> when you click Save.</p>
+
+    <div class="wizard-step">
+      <h4><span class="step-num">1</span>Adapter type</h4>
+      <p class="help">Picks how the VCF is loaded and which ACMG criteria are eligible.</p>
+      <label><input type="radio" name="w_adapter" value="single_sample" checked> Single sample (whole exome / panel)</label>
+      <label><input type="radio" name="w_adapter" value="trio"> Trio (proband + parents — enables PS2/PM6 de novo)</label>
+      <label><input type="radio" name="w_adapter" value="panel"> Targeted gene panel</label>
+      <label><input type="radio" name="w_adapter" value="gvcf"> gVCF / band format</label>
+    </div>
+
+    <div class="wizard-step">
+      <h4><span class="step-num">2</span>VCF input path</h4>
+      <p class="help">Local path or <code>gs://</code> URI. You can also drop a file in the Upload tab — it will populate this field.</p>
+      <input type="text" id="w_vcf" placeholder="data/vcf/sample.vcf.gz or gs://bucket/path.vcf.gz">
+    </div>
+
+    <div class="wizard-step">
+      <h4><span class="step-num">3</span>Reference genome</h4>
+      <label><input type="radio" name="w_ref" value="GRCh38" checked> GRCh38 (recommended)</label>
+      <label><input type="radio" name="w_ref" value="GRCh37"> GRCh37 / hg19</label>
+    </div>
+
+    <div class="wizard-step">
+      <h4><span class="step-num">4</span>VEP annotation mode</h4>
+      <p class="help">Stage 2 uses VEP for consequence prediction. <code>skip</code> bypasses VEP if your VCF is already annotated.</p>
+      <label><input type="radio" name="w_vep" value="docker" checked> Docker (pulls ensemblorg/ensembl-vep)</label>
+      <label><input type="radio" name="w_vep" value="local"> Local install (vep on PATH)</label>
+      <label><input type="radio" name="w_vep" value="skip"> Skip (use VCF's existing CSQ annotations)</label>
+    </div>
+
+    <div class="wizard-step">
+      <h4><span class="step-num">5</span>Reference databases</h4>
+      <p class="help">BigQuery tables for ClinVar pathogenicity and gnomAD frequencies. Defaults below are the public datasets.</p>
+      <div class="field-row"><label>ClinVar table</label><input type="text" id="w_clinvar" value="bigquery-public-data.human_variant_annotation.clinvar_hg38"></div>
+      <div class="field-row"><label>gnomAD table</label><input type="text" id="w_gnomad" value="bigquery-public-data.gnomAD.v4_1_0_exomes__variant_results"></div>
+    </div>
+
+    <div class="wizard-step">
+      <h4><span class="step-num">6</span>FHIR phenotype integration <span style="color:#888;font-weight:400;font-size:12px;">(optional)</span></h4>
+      <p class="help">Pulls patient phenotype from a FHIR Condition table to score VUSes against the patient's actual disease profile.</p>
+      <label><input type="checkbox" id="w_phen_enabled"> Enable phenotype matching</label>
+      <div class="field-row" style="margin-top:8px;"><label>FHIR project</label><input type="text" id="w_phen_project" placeholder="my-fhir-project"></div>
+      <div class="field-row"><label>FHIR dataset</label><input type="text" id="w_phen_dataset" placeholder="fhir_dataset_id"></div>
+    </div>
+
+    <div style="margin-top:18px;">
+      <button class="btn btn-primary" onclick="saveSetup()">Save Configuration</button>
+      <button class="btn btn-sm" onclick="loadSetup()" style="margin-left:8px;">Reload from server</button>
+      <span id="setupStatus" style="margin-left:14px;font-size:13px;"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== UPLOAD ===== -->
+<div id="tab-upload" class="tab-panel">
+  <div class="card">
+    <h3>Upload VCF File</h3>
+    <div id="uploadZone" class="upload-zone" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleDrop(event)">
+      <p style="font-size:16px;color:#666;">Drop VCF file here or click to browse</p>
+      <p style="font-size:12px;color:#999;margin-top:8px;">Supports .vcf, .vcf.gz, .g.vcf.gz</p>
+      <input type="file" id="fileInput" style="display:none" accept=".vcf,.gz" onchange="handleFile(this.files[0])">
+    </div>
+    <div id="uploadStatus" style="margin-top:15px;"></div>
+  </div>
+  <div class="card">
+    <h3>Or Set GCS Path</h3>
+    <div style="display:flex;gap:10px">
+      <input id="gcsPath" type="text" placeholder="gs://bucket/path/sample.vcf.gz" style="flex:1;padding:8px;border:1px solid #ccc;border-radius:4px;">
+      <button class="btn btn-primary" onclick="setGcsPath()">Set Path</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PIPELINE ===== -->
+<div id="tab-pipeline" class="tab-panel">
+  <div class="card">
+    <h3>Pipeline Control</h3>
+    <div style="display:flex;gap:10px;margin-bottom:15px">
+      <button class="btn btn-primary" onclick="runPipeline()">Run Full Pipeline</button>
+      <button class="btn btn-danger" onclick="cancelPipeline()">Cancel</button>
+    </div>
+    <div id="pipelineStages"></div>
+  </div>
+  <div class="card">
+    <h3>Pipeline Log</h3>
+    <div id="pipelineLog" class="log-box">Waiting for pipeline to start...</div>
+  </div>
+</div>
+
+<!-- ===== VARIANTS ===== -->
+<div id="tab-variants" class="tab-panel">
+  <div class="card">
+    <div id="variantSummary" class="grid grid-5" style="margin-bottom:15px"></div>
+    <div class="filter-bar">
+      <select id="filterClass" onchange="loadVariants()">
+        <option value="">All Classifications</option>
+        <option value="Pathogenic">Pathogenic</option>
+        <option value="Likely pathogenic">Likely Pathogenic</option>
+        <option value="VUS">VUS</option>
+        <option value="Likely benign">Likely Benign</option>
+        <option value="Benign">Benign</option>
+      </select>
+      <input id="filterGene" type="text" placeholder="Gene filter..." onkeyup="loadVariants()">
+      <span id="variantCount" style="color:#666;font-size:13px;"></span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr>
+          <th>Gene</th><th>Position</th><th>Change</th><th>Consequence</th>
+          <th>Classification</th><th>gnomAD AF</th><th>CADD</th><th>REVEL</th>
+          <th>ClinVar</th><th>Criteria</th>
+        </tr></thead>
+        <tbody id="variantTable"></tbody>
+      </table>
+    </div>
+    <div id="pagination" style="margin-top:10px;text-align:center;"></div>
+  </div>
+</div>
+
+<!-- ===== REPORTS ===== -->
+<div id="tab-reports" class="tab-panel">
+  <div class="card">
+    <h3>Generated Reports</h3>
+    <div id="reportList">Loading...</div>
+  </div>
+  <div class="card">
+    <h3>Report Preview</h3>
+    <iframe id="reportFrame" style="width:100%;height:600px;border:1px solid #e0e0e0;border-radius:6px;" src="about:blank"></iframe>
+  </div>
+</div>
+
+<!-- ===== SETTINGS ===== -->
+<div id="tab-settings" class="tab-panel">
+  <div class="card">
+    <h3>Pipeline Configuration</h3>
+    <p style="color:#666;margin-bottom:12px;">Every key in <code>config/pipeline_config.yaml</code> is editable below. Click a section to expand.</p>
+
+    <details class="setting-section" open>
+      <summary>Input</summary>
+      <div class="section-body">
+        <div class="field-row"><label>Adapter</label><select id="s_input_adapter"><option>single_sample</option><option>trio</option><option>panel</option><option>gvcf</option></select></div>
+        <div class="field-row"><label>VCF path</label><input type="text" id="s_input_vcf_path"></div>
+        <div class="field-row"><label>Reference genome</label><select id="s_input_reference_genome"><option>GRCh38</option><option>GRCh37</option></select></div>
+        <div class="field-row"><label>Trio: proband ID</label><input type="text" id="s_input_trio_proband"></div>
+        <div class="field-row"><label>Trio: father ID</label><input type="text" id="s_input_trio_father"></div>
+        <div class="field-row"><label>Trio: mother ID</label><input type="text" id="s_input_trio_mother"></div>
+        <div class="field-row"><label>Panel name</label><input type="text" id="s_input_panel_name" placeholder="cardiac, cancer, neuro, custom"></div>
+      </div>
+    </details>
+
+    <details class="setting-section">
+      <summary>Annotation</summary>
+      <div class="section-body">
+        <div class="field-row"><label>VEP mode</label><select id="s_annot_vep_mode"><option>docker</option><option>local</option><option>skip</option></select></div>
+        <div class="field-row"><label>CADD pathogenic ≥</label><input type="number" step="0.1" id="s_annot_cadd"></div>
+        <div class="field-row"><label>REVEL pathogenic ≥</label><input type="number" step="0.001" id="s_annot_revel"></div>
+        <div class="field-row"><label>SpliceAI pathogenic ≥</label><input type="number" step="0.01" id="s_annot_spliceai"></div>
+        <div class="field-row"><label>AlphaMissense pathogenic ≥</label><input type="number" step="0.001" id="s_annot_alphamissense"></div>
+      </div>
+    </details>
+
+    <details class="setting-section">
+      <summary>Databases</summary>
+      <div class="section-body">
+        <div class="field-row"><label>ClinVar BQ table</label><input type="text" id="s_db_clinvar"></div>
+        <div class="field-row"><label>gnomAD BQ table</label><input type="text" id="s_db_gnomad"></div>
+        <div class="field-row"><label>ClinGen LoF gene list URL</label><input type="text" id="s_db_clingen"></div>
+      </div>
+    </details>
+
+    <details class="setting-section">
+      <summary>ACMG thresholds</summary>
+      <div class="section-body">
+        <div class="field-row"><label>BA1 (standalone benign) MAF ≥</label><input type="number" step="0.001" id="s_acmg_ba1"></div>
+        <div class="field-row"><label>BS1 (strong benign) MAF ≥</label><input type="number" step="0.001" id="s_acmg_bs1"></div>
+        <div class="field-row"><label>PM2 (rare) MAF ≤</label><input type="number" step="0.00001" id="s_acmg_pm2"></div>
+      </div>
+    </details>
+
+    <details class="setting-section">
+      <summary>Phenotype</summary>
+      <div class="section-body">
+        <div class="field-row"><label>Enabled</label><label style="font-weight:400;"><input type="checkbox" id="s_phen_enabled"> Enable FHIR phenotype matching</label></div>
+        <div class="field-row"><label>FHIR project</label><input type="text" id="s_phen_project"></div>
+        <div class="field-row"><label>FHIR dataset</label><input type="text" id="s_phen_dataset"></div>
+        <div class="field-row"><label>Phenotype boost factor</label><input type="number" step="0.1" id="s_phen_boost"></div>
+      </div>
+    </details>
+
+    <details class="setting-section">
+      <summary>Output</summary>
+      <div class="section-body">
+        <div class="field-row"><label>GCS bucket</label><input type="text" id="s_out_gcs_bucket" placeholder="my-bucket (no gs:// prefix)"></div>
+        <div class="field-row"><label>GCS prefix</label><input type="text" id="s_out_gcs_prefix"></div>
+        <div class="field-row"><label>Local data dir</label><input type="text" id="s_out_data_dir"></div>
+        <div class="field-row"><label>Local reports dir</label><input type="text" id="s_out_reports_dir"></div>
+        <div class="field-row"><label>Report format</label><select id="s_out_report_format"><option>html</option><option>pdf</option><option>both</option></select></div>
+      </div>
+    </details>
+
+    <details class="setting-section">
+      <summary>Pipeline runtime</summary>
+      <div class="section-body">
+        <div class="field-row"><label>Parallel workers</label><input type="number" id="s_pipe_workers"></div>
+        <div class="field-row"><label>Log level</label><select id="s_pipe_log_level"><option>DEBUG</option><option>INFO</option><option>WARNING</option><option>ERROR</option></select></div>
+      </div>
+    </details>
+
+    <details class="setting-section">
+      <summary>Raw YAML (advanced)</summary>
+      <div class="section-body">
+        <p style="color:#888;font-size:12px;margin-bottom:8px;">Direct edit of the full config as JSON. Use for keys not exposed above.</p>
+        <textarea id="configEditor" class="config-editor"></textarea>
+        <div style="margin-top:10px;">
+          <button class="btn btn-sm" onclick="saveConfig()">Save raw JSON</button>
+          <button class="btn btn-sm" onclick="loadConfig()" style="margin-left:8px;">Reload</button>
+        </div>
+      </div>
+    </details>
+
+    <div style="margin-top:14px;">
+      <button class="btn btn-primary" onclick="saveSettings()">Save All Settings</button>
+      <button class="btn btn-sm" onclick="loadSettings()" style="margin-left:8px;">Reload from server</button>
+      <span id="settingsStatus" style="margin-left:14px;font-size:13px;"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Gene Panels</h3>
+    <div id="panelList">Loading...</div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// Tab management
+function showTab(name, evt) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  // Mark the matching tab active (works whether called from click handler or programmatically)
+  const target = (evt && evt.target) || Array.from(document.querySelectorAll('.tab')).find(t => t.textContent.trim().toLowerCase() === name);
+  if (target) target.classList.add('active');
+  if (name === 'setup') loadSetup();
+  if (name === 'variants') loadVariants();
+  if (name === 'reports') loadReports();
+  if (name === 'settings') { loadSettings(); loadPanels(); }
+  if (name === 'overview' || name === 'pipeline') refreshStatus();
+}
+
+// First-run detection
+function checkFirstRun() {
+  fetch('api/config').then(r=>r.json()).then(cfg => {
+    const empty = !cfg || Object.keys(cfg).length === 0 || !cfg.input || !cfg.input.adapter;
+    document.getElementById('firstRunBanner').classList.toggle('hidden', !empty);
+  }).catch(()=>{});
+}
+
+// Status polling
+let pollInterval;
+function refreshStatus() {
+  fetch('api/status').then(r=>r.json()).then(data => {
+    const badge = document.getElementById('statusBadge');
+    badge.textContent = data.running ? 'Running...' : `${data.completed}/7 Complete`;
+    badge.className = 'status-badge ' + (data.running ? 'status-running' : 'status-idle');
+
+    // Stage list
+    let html = '';
+    data.stages.forEach(s => {
+      const cls = s.complete ? 'complete' : 'pending';
+      html += `<div class="stage ${cls}"><span class="num">${s.stage}</span><span class="name">${s.name}</span><span>${s.complete ? '✓' : '○'}</span></div>`;
+    });
+    const el = document.getElementById('stageList');
+    if (el) el.innerHTML = html;
+    const el2 = document.getElementById('pipelineStages');
+    if (el2) el2.innerHTML = html;
+  }).catch(()=>{});
+
+  // Databases
+  fetch('api/databases').then(r=>r.json()).then(data => {
+    let html = '';
+    data.databases.forEach(db => {
+      html += `<div style="padding:5px 0;"><strong>${db.name}:</strong> ${db.table} <span style="color:#4caf50;">✓ Configured</span></div>`;
+    });
+    const el = document.getElementById('dbStatus');
+    if (el) el.innerHTML = html || '<p style="color:#999;">No databases configured</p>';
+  }).catch(()=>{});
+}
+
+// Pipeline
+function runPipeline() {
+  fetch('api/pipeline/run', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})
+    .then(r=>r.json()).then(data => {
+      if (data.error) { alert(data.error); return; }
+      pollInterval = setInterval(pollPipelineLog, 2000);
+    });
+}
+
+function cancelPipeline() {
+  fetch('api/pipeline/cancel', {method:'POST'}).then(r=>r.json());
+  if (pollInterval) clearInterval(pollInterval);
+}
+
+function pollPipelineLog() {
+  fetch('api/pipeline/status').then(r=>r.json()).then(data => {
+    const el = document.getElementById('pipelineLog');
+    el.textContent = data.log.join('\n');
+    el.scrollTop = el.scrollHeight;
+    if (!data.running) {
+      clearInterval(pollInterval);
+      refreshStatus();
+    }
+  });
+}
+
+// Variants
+let currentPage = 1;
+function loadVariants(page) {
+  currentPage = page || 1;
+  const cls = document.getElementById('filterClass')?.value || '';
+  const gene = document.getElementById('filterGene')?.value || '';
+  const params = new URLSearchParams({page: currentPage, per_page: 50});
+  if (cls) params.set('classification', cls);
+  if (gene) params.set('gene', gene);
+
+  fetch('api/variants?' + params).then(r=>r.json()).then(data => {
+    const tb = document.getElementById('variantTable');
+    if (!tb) return;
+    let html = '';
+    data.variants.forEach(v => {
+      const badgeCls = (v.acmg_classification||'').replace(/\s+/g,'').replace('Likely','L');
+      const badge = `<span class="badge badge-${badgeCls}">${v.acmg_classification||''}</span>`;
+      const af = v.gnomad_af ? (v.gnomad_af < 0.0001 ? v.gnomad_af.toExponential(1) : v.gnomad_af.toFixed(4)) : '—';
+      html += `<tr>
+        <td><strong>${v.gene||''}</strong></td>
+        <td>${v.chrom||''}:${v.pos||''}</td>
+        <td>${v.ref||''}>${v.alt||''}</td>
+        <td>${v.consequence||''}</td>
+        <td>${badge}</td>
+        <td>${af}</td>
+        <td>${v.cadd_phred ? v.cadd_phred.toFixed(1) : '—'}</td>
+        <td>${v.revel ? v.revel.toFixed(3) : '—'}</td>
+        <td>${v.clinvar_classification||'—'}</td>
+        <td style="font-size:11px;">${v.acmg_criteria||''}</td>
+      </tr>`;
+    });
+    tb.innerHTML = html || '<tr><td colspan="10" style="text-align:center;color:#999;">No variants. Run the pipeline first.</td></tr>';
+    document.getElementById('variantCount').textContent = `${data.total} variants`;
+
+    // Summary cards
+    if (data.total > 0) {
+      fetch('api/variants?per_page=99999').then(r=>r.json()).then(all => {
+        const counts = {};
+        all.variants.forEach(v => { counts[v.acmg_classification] = (counts[v.acmg_classification]||0)+1; });
+        document.getElementById('variantSummary').innerHTML = [
+          {c:'Pathogenic',bg:'bg-p'},{c:'Likely pathogenic',bg:'bg-lp'},{c:'VUS',bg:'bg-vus'},
+          {c:'Likely benign',bg:'bg-lb'},{c:'Benign',bg:'bg-b'}
+        ].map(x => `<div class="stat-card ${x.bg}"><div class="value">${counts[x.c]||0}</div><div class="label">${x.c}</div></div>`).join('');
+      });
+    }
+  }).catch(()=>{});
+}
+
+// Reports
+function loadReports() {
+  fetch('api/reports').then(r=>r.json()).then(data => {
+    const el = document.getElementById('reportList');
+    if (!data.reports.length) { el.innerHTML = '<p style="color:#999;">No reports generated. Run the pipeline first.</p>'; return; }
+    el.innerHTML = data.reports.map(r =>
+      `<div style="padding:8px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;">
+        <span><strong>${r.sample_id}</strong> (${r.size_kb} KB)</span>
+        <button class="btn btn-sm btn-primary" onclick="previewReport('${r.sample_id}')">Preview</button>
+      </div>`
+    ).join('');
+  }).catch(()=>{});
+}
+
+function previewReport(sample) {
+  document.getElementById('reportFrame').src = 'api/reports/' + sample;
+}
+
+// Config
+function loadConfig() {
+  fetch('api/config').then(r=>r.json()).then(data => {
+    document.getElementById('configEditor').value = JSON.stringify(data, null, 2);
+  }).catch(()=>{});
+}
+
+function saveConfig() {
+  try {
+    const config = JSON.parse(document.getElementById('configEditor').value);
+    fetch('api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(config)})
+      .then(r=>r.json()).then(data => {
+        alert(data.error ? 'Error: '+data.error : 'Configuration saved!');
+      });
+  } catch(e) { alert('Invalid JSON: ' + e.message); }
+}
+
+// Panels
+function loadPanels() {
+  fetch('api/gene_panels').then(r=>r.json()).then(data => {
+    document.getElementById('panelList').innerHTML = data.panels.map(p =>
+      `<div style="padding:5px 0;"><strong>${p.display_name}</strong> — ${p.gene_count} genes (${p.name})</div>`
+    ).join('') || '<p style="color:#999;">No panels found</p>';
+  }).catch(()=>{});
+}
+
+// Upload
+document.getElementById('uploadZone')?.addEventListener('click', () => document.getElementById('fileInput').click());
+
+function handleFile(file) {
+  if (!file) return;
+  const form = new FormData();
+  form.append('file', file);
+  document.getElementById('uploadStatus').innerHTML = '<p>Uploading...</p>';
+  fetch('api/upload', {method:'POST', body:form}).then(r=>r.json()).then(data => {
+    document.getElementById('uploadStatus').innerHTML = data.error
+      ? `<p style="color:red;">${data.error}</p>`
+      : `<p style="color:#4caf50;">Uploaded: ${data.path} (${data.size_mb} MB)</p>`;
+  }).catch(e => { document.getElementById('uploadStatus').innerHTML = `<p style="color:red;">Upload failed</p>`; });
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  e.target.classList.remove('dragover');
+  handleFile(e.dataTransfer.files[0]);
+}
+
+function setGcsPath() {
+  const path = document.getElementById('gcsPath').value.trim();
+  if (!path) return;
+  fetch('api/config').then(r=>r.json()).then(config => {
+    config.input = config.input || {};
+    config.input.vcf_path = path;
+    return fetch('api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(config)});
+  }).then(r=>r.json()).then(() => alert('VCF path set: ' + path));
+}
+
+// ===== Setup wizard =====
+function loadSetup() {
+  fetch('api/config').then(r=>r.json()).then(cfg => {
+    cfg = cfg || {};
+    const input = cfg.input || {};
+    const annot = cfg.annotation || {};
+    const dbs = cfg.databases || {};
+    const phen = cfg.phenotype || {};
+    const adapter = input.adapter || 'single_sample';
+    document.querySelector(`input[name=w_adapter][value="${adapter}"]`)?.click();
+    document.getElementById('w_vcf').value = input.vcf_path || '';
+    const ref = input.reference_genome || 'GRCh38';
+    document.querySelector(`input[name=w_ref][value="${ref}"]`)?.click();
+    const vep = annot.vep_mode || 'docker';
+    document.querySelector(`input[name=w_vep][value="${vep}"]`)?.click();
+    document.getElementById('w_clinvar').value = (dbs.clinvar && dbs.clinvar.bq_table) || 'bigquery-public-data.human_variant_annotation.clinvar_hg38';
+    document.getElementById('w_gnomad').value = (dbs.gnomad && dbs.gnomad.bq_table) || 'bigquery-public-data.gnomAD.v4_1_0_exomes__variant_results';
+    document.getElementById('w_phen_enabled').checked = !!phen.enabled;
+    document.getElementById('w_phen_project').value = phen.fhir_project || '';
+    document.getElementById('w_phen_dataset').value = phen.fhir_dataset || '';
+  }).catch(()=>{});
+}
+
+function saveSetup() {
+  fetch('api/config').then(r=>r.json()).then(cfg => {
+    cfg = cfg || {};
+    cfg.input = cfg.input || {};
+    cfg.input.adapter = document.querySelector('input[name=w_adapter]:checked').value;
+    cfg.input.vcf_path = document.getElementById('w_vcf').value.trim();
+    cfg.input.reference_genome = document.querySelector('input[name=w_ref]:checked').value;
+    cfg.annotation = cfg.annotation || {};
+    cfg.annotation.vep_mode = document.querySelector('input[name=w_vep]:checked').value;
+    cfg.databases = cfg.databases || {};
+    cfg.databases.clinvar = cfg.databases.clinvar || {};
+    cfg.databases.clinvar.bq_table = document.getElementById('w_clinvar').value.trim();
+    cfg.databases.gnomad = cfg.databases.gnomad || {};
+    cfg.databases.gnomad.bq_table = document.getElementById('w_gnomad').value.trim();
+    cfg.phenotype = cfg.phenotype || {};
+    cfg.phenotype.enabled = document.getElementById('w_phen_enabled').checked;
+    cfg.phenotype.fhir_project = document.getElementById('w_phen_project').value.trim();
+    cfg.phenotype.fhir_dataset = document.getElementById('w_phen_dataset').value.trim();
+    return fetch('api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)});
+  }).then(r=>r.json()).then(data => {
+    const el = document.getElementById('setupStatus');
+    if (data.error) { el.textContent = 'Error: ' + data.error; el.style.color='#d32f2f'; return; }
+    el.textContent = 'Saved. Switching to Pipeline tab…'; el.style.color='#2e7d32';
+    checkFirstRun();
+    setTimeout(() => showTab('pipeline'), 900);
+  }).catch(e => {
+    const el = document.getElementById('setupStatus'); el.textContent = 'Save failed'; el.style.color='#d32f2f';
+  });
+}
+
+// ===== Structured settings =====
+function _setVal(id, v) { const el = document.getElementById(id); if (el && v !== undefined && v !== null) el.value = v; }
+function _setCheck(id, v) { const el = document.getElementById(id); if (el) el.checked = !!v; }
+function _getVal(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+function _getNum(id) { const v = _getVal(id); return v === '' ? null : parseFloat(v); }
+function _getCheck(id) { const el = document.getElementById(id); return el ? el.checked : false; }
+
+function loadSettings() {
+  loadConfig();  // populates raw JSON textarea
+  fetch('api/config').then(r=>r.json()).then(cfg => {
+    cfg = cfg || {};
+    const inp = cfg.input || {};
+    _setVal('s_input_adapter', inp.adapter);
+    _setVal('s_input_vcf_path', inp.vcf_path);
+    _setVal('s_input_reference_genome', inp.reference_genome);
+    const trio = inp.trio || {};
+    _setVal('s_input_trio_proband', trio.proband_id);
+    _setVal('s_input_trio_father', trio.father_id);
+    _setVal('s_input_trio_mother', trio.mother_id);
+    _setVal('s_input_panel_name', (inp.panel || {}).name || inp.panel_name);
+
+    const ann = cfg.annotation || {};
+    const t = ann.thresholds || {};
+    _setVal('s_annot_vep_mode', ann.vep_mode);
+    _setVal('s_annot_cadd', t.cadd_pathogenic);
+    _setVal('s_annot_revel', t.revel_pathogenic);
+    _setVal('s_annot_spliceai', t.spliceai_pathogenic);
+    _setVal('s_annot_alphamissense', t.alphamissense_pathogenic);
+
+    const dbs = cfg.databases || {};
+    _setVal('s_db_clinvar', (dbs.clinvar || {}).bq_table);
+    _setVal('s_db_gnomad', (dbs.gnomad || {}).bq_table);
+    _setVal('s_db_clingen', (dbs.clingen || {}).api_url || dbs.clingen_url);
+
+    const a = cfg.acmg || {};
+    _setVal('s_acmg_ba1', a.ba1_threshold);
+    _setVal('s_acmg_bs1', a.bs1_threshold);
+    _setVal('s_acmg_pm2', a.pm2_threshold);
+
+    const p = cfg.phenotype || {};
+    _setCheck('s_phen_enabled', p.enabled);
+    _setVal('s_phen_project', p.fhir_project);
+    _setVal('s_phen_dataset', p.fhir_dataset);
+    _setVal('s_phen_boost', p.boost_factor);
+
+    const o = cfg.output || {};
+    _setVal('s_out_gcs_bucket', o.gcs_bucket);
+    _setVal('s_out_gcs_prefix', o.gcs_prefix);
+    _setVal('s_out_data_dir', o.data_dir);
+    _setVal('s_out_reports_dir', o.reports_dir);
+    _setVal('s_out_report_format', o.report_format);
+
+    const pl = cfg.pipeline || {};
+    _setVal('s_pipe_workers', pl.parallel_workers);
+    _setVal('s_pipe_log_level', pl.log_level);
+  }).catch(()=>{});
+}
+
+function saveSettings() {
+  fetch('api/config').then(r=>r.json()).then(cfg => {
+    cfg = cfg || {};
+    cfg.input = cfg.input || {};
+    cfg.input.adapter = _getVal('s_input_adapter');
+    cfg.input.vcf_path = _getVal('s_input_vcf_path');
+    cfg.input.reference_genome = _getVal('s_input_reference_genome');
+    cfg.input.trio = cfg.input.trio || {};
+    cfg.input.trio.proband_id = _getVal('s_input_trio_proband');
+    cfg.input.trio.father_id = _getVal('s_input_trio_father');
+    cfg.input.trio.mother_id = _getVal('s_input_trio_mother');
+    cfg.input.panel = cfg.input.panel || {};
+    cfg.input.panel.name = _getVal('s_input_panel_name');
+
+    cfg.annotation = cfg.annotation || {};
+    cfg.annotation.vep_mode = _getVal('s_annot_vep_mode');
+    cfg.annotation.thresholds = cfg.annotation.thresholds || {};
+    cfg.annotation.thresholds.cadd_pathogenic = _getNum('s_annot_cadd');
+    cfg.annotation.thresholds.revel_pathogenic = _getNum('s_annot_revel');
+    cfg.annotation.thresholds.spliceai_pathogenic = _getNum('s_annot_spliceai');
+    cfg.annotation.thresholds.alphamissense_pathogenic = _getNum('s_annot_alphamissense');
+
+    cfg.databases = cfg.databases || {};
+    cfg.databases.clinvar = cfg.databases.clinvar || {};
+    cfg.databases.clinvar.bq_table = _getVal('s_db_clinvar');
+    cfg.databases.gnomad = cfg.databases.gnomad || {};
+    cfg.databases.gnomad.bq_table = _getVal('s_db_gnomad');
+    cfg.databases.clingen = cfg.databases.clingen || {};
+    cfg.databases.clingen.api_url = _getVal('s_db_clingen');
+
+    cfg.acmg = cfg.acmg || {};
+    cfg.acmg.ba1_threshold = _getNum('s_acmg_ba1');
+    cfg.acmg.bs1_threshold = _getNum('s_acmg_bs1');
+    cfg.acmg.pm2_threshold = _getNum('s_acmg_pm2');
+
+    cfg.phenotype = cfg.phenotype || {};
+    cfg.phenotype.enabled = _getCheck('s_phen_enabled');
+    cfg.phenotype.fhir_project = _getVal('s_phen_project');
+    cfg.phenotype.fhir_dataset = _getVal('s_phen_dataset');
+    cfg.phenotype.boost_factor = _getNum('s_phen_boost');
+
+    cfg.output = cfg.output || {};
+    cfg.output.gcs_bucket = _getVal('s_out_gcs_bucket');
+    cfg.output.gcs_prefix = _getVal('s_out_gcs_prefix');
+    cfg.output.data_dir = _getVal('s_out_data_dir');
+    cfg.output.reports_dir = _getVal('s_out_reports_dir');
+    cfg.output.report_format = _getVal('s_out_report_format');
+
+    cfg.pipeline = cfg.pipeline || {};
+    cfg.pipeline.parallel_workers = _getNum('s_pipe_workers');
+    cfg.pipeline.log_level = _getVal('s_pipe_log_level');
+
+    return fetch('api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)});
+  }).then(r=>r.json()).then(data => {
+    const el = document.getElementById('settingsStatus');
+    if (data.error) { el.textContent = 'Error: ' + data.error; el.style.color='#d32f2f'; return; }
+    el.textContent = 'Saved.'; el.style.color='#2e7d32';
+    checkFirstRun();
+    loadConfig();
+  }).catch(e => {
+    const el = document.getElementById('settingsStatus'); el.textContent = 'Save failed'; el.style.color='#d32f2f';
+  });
+}
+
+// Init
+refreshStatus();
+checkFirstRun();
+setInterval(refreshStatus, 15000);
+</script>
+</body>
+</html>

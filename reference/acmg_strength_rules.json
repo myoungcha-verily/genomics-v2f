@@ -1,0 +1,89 @@
+{
+  "evidence_strengths": {
+    "standalone": 8,
+    "very_strong": 4,
+    "strong": 2,
+    "moderate": 1,
+    "supporting": 0.5
+  },
+  "pathogenic_rules": [
+    {
+      "rule": "PVS1 + ≥1 PS",
+      "min_evidence": {"very_strong": 1, "strong": 1}
+    },
+    {
+      "rule": "PVS1 + ≥2 PM",
+      "min_evidence": {"very_strong": 1, "moderate": 2}
+    },
+    {
+      "rule": "PVS1 + 1 PM + 1 PP",
+      "min_evidence": {"very_strong": 1, "moderate": 1, "supporting": 1}
+    },
+    {
+      "rule": "PVS1 + ≥2 PP",
+      "min_evidence": {"very_strong": 1, "supporting": 2}
+    },
+    {
+      "rule": "≥2 PS",
+      "min_evidence": {"strong": 2}
+    },
+    {
+      "rule": "1 PS + ≥3 PM",
+      "min_evidence": {"strong": 1, "moderate": 3}
+    },
+    {
+      "rule": "1 PS + 2 PM + ≥2 PP",
+      "min_evidence": {"strong": 1, "moderate": 2, "supporting": 2}
+    },
+    {
+      "rule": "1 PS + 1 PM + ≥4 PP",
+      "min_evidence": {"strong": 1, "moderate": 1, "supporting": 4}
+    }
+  ],
+  "likely_pathogenic_rules": [
+    {
+      "rule": "PVS1 + 1 PM",
+      "min_evidence": {"very_strong": 1, "moderate": 1}
+    },
+    {
+      "rule": "1 PS + 1-2 PM",
+      "min_evidence": {"strong": 1, "moderate": 1}
+    },
+    {
+      "rule": "1 PS + ≥2 PP",
+      "min_evidence": {"strong": 1, "supporting": 2}
+    },
+    {
+      "rule": "≥3 PM",
+      "min_evidence": {"moderate": 3}
+    },
+    {
+      "rule": "2 PM + ≥2 PP",
+      "min_evidence": {"moderate": 2, "supporting": 2}
+    },
+    {
+      "rule": "1 PM + ≥4 PP",
+      "min_evidence": {"moderate": 1, "supporting": 4}
+    }
+  ],
+  "benign_rules": [
+    {
+      "rule": "1 BA (standalone)",
+      "min_evidence": {"standalone": 1}
+    },
+    {
+      "rule": "≥2 BS",
+      "min_evidence": {"strong": 2}
+    }
+  ],
+  "likely_benign_rules": [
+    {
+      "rule": "1 BS + 1 BP",
+      "min_evidence": {"strong": 1, "supporting": 1}
+    },
+    {
+      "rule": "≥2 BP",
+      "min_evidence": {"supporting": 2}
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "panel_name": "Custom Gene Panel Template",
+  "version": "1.0",
+  "description": "Template for creating a custom gene panel. Replace genes and conditions with your targets.",
+  "gene_count": 0,
+  "genes": [],
+  "conditions": [],
+  "notes": "Add HGNC gene symbols to the genes array. Panel will be used to filter variants to only those in listed genes."
+}

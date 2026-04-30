@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Variant Report — {{ proband_id }}</title>
+<style>
+{% include 'report.css' %}
+</style>
+</head>
+<body>
+<div class="report-container">
+
+<!-- Header -->
+<div class="report-header">
+  <h1>Clinical Variant Interpretation Report</h1>
+  <p class="subtitle">Variant-to-Function Reporter v{{ pipeline_version }}</p>
+  <div class="report-meta">
+    <div class="meta-item"><span class="meta-label">Sample ID:</span> {{ proband_id }}</div>
+    <div class="meta-item"><span class="meta-label">Report Date:</span> {{ report_date }}</div>
+    <div class="meta-item"><span class="meta-label">Reference:</span> {{ reference_genome }}</div>
+    <div class="meta-item"><span class="meta-label">Analysis Type:</span> {{ adapter_type }}</div>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="section">
+  <h2>Variant Summary</h2>
+  <div class="summary-cards">
+    <div class="summary-card card-pathogenic">
+      <div class="count">{{ n_pathogenic }}</div>
+      <div class="label">Pathogenic</div>
+    </div>
+    <div class="summary-card card-likely-pathogenic">
+      <div class="count">{{ n_likely_pathogenic }}</div>
+      <div class="label">Likely Pathogenic</div>
+    </div>
+    <div class="summary-card card-vus">
+      <div class="count">{{ n_vus }}</div>
+      <div class="label">VUS</div>
+    </div>
+    <div class="summary-card card-likely-benign">
+      <div class="count">{{ n_likely_benign }}</div>
+      <div class="label">Likely Benign</div>
+    </div>
+    <div class="summary-card card-benign">
+      <div class="count">{{ n_benign }}</div>
+      <div class="label">Benign</div>
+    </div>
+  </div>
+  <p style="font-size:13px;color:#666;">Total variants analyzed: {{ total_variants | default(0) }}</p>
+</div>
+
+<!-- Phenotype Section -->
+{% if has_phenotype %}
+<div class="section">
+  <div class="phenotype-section">
+    <h3>Patient Phenotype Profile (FHIR)</h3>
+    <p>{{ phenotype.n_conditions }} conditions identified, {{ phenotype.n_candidate_genes }} candidate genes</p>
+    {% if phenotype.omim_diseases %}
+    <p><strong>Matched OMIM diseases:</strong></p>
+    <ul>
+    {% for d in phenotype.omim_diseases %}
+      <li>{{ d.disease }} (OMIM: {{ d.omim }}) — Genes: {{ d.genes | join(', ') }}</li>
+    {% endfor %}
+    </ul>
+    {% endif %}
+    {% if phenotype.candidate_genes %}
+    <p><strong>Candidate genes:</strong> {{ phenotype.candidate_genes | join(', ') }}</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Tier 1: Pathogenic / Likely Pathogenic -->
+<div class="section">
+  <h2>Tier 1: Pathogenic &amp; Likely Pathogenic Variants</h2>
+  {% if tier1_variants %}
+  {% for v in tier1_variants %}
+  <div class="variant-card">
+    <div class="variant-card-header">
+      <span class="variant-name">{{ v.display_name }}</span>
+      <span>
+        {% if v.is_de_novo %}<span class="de-novo-badge">DE NOVO</span>{% endif %}
+        {% if v.phenotype_match > 0 %}<span class="phenotype-badge">PHENOTYPE MATCH</span>{% endif %}
+        <span class="classification-badge" style="background:{{ v.classification_color }}">{{ v.classification }}</span>
+      </span>
+    </div>
+    <div class="variant-details">
+      <div class="detail-item">
+        <div class="detail-label">Location</div>
+        <div class="detail-value">{{ v.chrom }}:{{ v.pos }} {{ v.ref }}&gt;{{ v.alt }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Consequence</div>
+        <div class="detail-value">{{ v.consequence }} ({{ v.severity }})</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Genotype</div>
+        <div class="detail-value">{{ v.genotype }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">gnomAD AF</div>
+        <div class="detail-value">{{ v.gnomad_af_display }}</div>
+      </div>
+      {% if v.hgvs_c %}
+      <div class="detail-item">
+        <div class="detail-label">HGVSc</div>
+        <div class="detail-value" style="word-break:break-all;">{{ v.hgvs_c }}</div>
+      </div>
+      {% endif %}
+      {% if v.hgvs_p %}
+      <div class="detail-item">
+        <div class="detail-label">HGVSp</div>
+        <div class="detail-value">{{ v.hgvs_p }}</div>
+      </div>
+      {% endif %}
+      {% if v.clinvar %}
+      <div class="detail-item">
+        <div class="detail-label">ClinVar</div>
+        <div class="detail-value">{{ v.clinvar }} ({{ v.clinvar_stars }}★)</div>
+      </div>
+      {% endif %}
+      <div class="detail-item">
+        <div class="detail-label">Depth / AF</div>
+        <div class="detail-value">{{ v.read_depth }}x / {{ "%.2f" | format(v.allele_fraction) }}</div>
+      </div>
+    </div>
+    <!-- In-silico scores -->
+    <div style="margin-top:10px;">
+      {% if v.cadd is not none %}
+      <div class="score-bar">
+        <span class="score-name">CADD</span>
+        <div style="width:200px;background:#e0e0e0;border-radius:4px;overflow:hidden;">
+          <div class="score-fill" style="width:{{ [v.cadd / 40 * 100, 100] | min }}%;background:{% if v.cadd >= 25.3 %}#d32f2f{% elif v.cadd <= 15 %}#388e3c{% else %}#f9a825{% endif %};"></div>
+        </div>
+        <span class="score-value">{{ "%.1f" | format(v.cadd) }}</span>
+      </div>
+      {% endif %}
+      {% if v.revel is not none %}
+      <div class="score-bar">
+        <span class="score-name">REVEL</span>
+        <div style="width:200px;background:#e0e0e0;border-radius:4px;overflow:hidden;">
+          <div class="score-fill" style="width:{{ v.revel * 100 }}%;background:{% if v.revel >= 0.644 %}#d32f2f{% elif v.revel <= 0.29 %}#388e3c{% else %}#f9a825{% endif %};"></div>
+        </div>
+        <span class="score-value">{{ "%.3f" | format(v.revel) }}</span>
+      </div>
+      {% endif %}
+      {% if v.spliceai is not none %}
+      <div class="score-bar">
+        <span class="score-name">SpliceAI</span>
+        <div style="width:200px;background:#e0e0e0;border-radius:4px;overflow:hidden;">
+          <div class="score-fill" style="width:{{ v.spliceai * 100 }}%;background:{% if v.spliceai >= 0.2 %}#d32f2f{% elif v.spliceai <= 0.1 %}#388e3c{% else %}#f9a825{% endif %};"></div>
+        </div>
+        <span class="score-value">{{ "%.2f" | format(v.spliceai) }}</span>
+      </div>
+      {% endif %}
+    </div>
+    <!-- ACMG Criteria -->
+    <div class="criteria-list">
+      <strong>ACMG Criteria:</strong>
+      {% for c in v.criteria.split(', ') %}
+        {% if c.startswith(('PVS', 'PS', 'PM', 'PP')) %}
+        <span class="criterion criterion-pathogenic">{{ c }}</span>
+        {% elif c.startswith(('BA', 'BS', 'BP')) %}
+        <span class="criterion criterion-benign">{{ c }}</span>
+        {% elif c != 'No criteria met' %}
+        <span class="criterion" style="background:#e0e0e0;">{{ c }}</span>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p style="color:#666;font-style:italic;">No pathogenic or likely pathogenic variants identified.</p>
+  {% endif %}
+</div>
+
+<!-- Tier 2: VUS -->
+<div class="section">
+  <h2>Tier 2: Variants of Uncertain Significance (VUS)</h2>
+  {% if tier2_variants %}
+  <p style="font-size:13px;color:#666;">Showing top {{ tier2_variants | length }} VUS{% if n_vus > max_vus_shown %} of {{ n_vus }} total{% endif %}, sorted by in-silico scores.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Gene</th><th>Variant</th><th>Consequence</th><th>gnomAD AF</th>
+        <th>CADD</th><th>REVEL</th><th>ClinVar</th><th>Criteria</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for v in tier2_variants %}
+      <tr>
+        <td><strong>{{ v.gene }}</strong></td>
+        <td style="font-size:12px;">{{ v.chrom }}:{{ v.pos }}<br>{{ v.ref }}&gt;{{ v.alt }}</td>
+        <td>{{ v.consequence }}</td>
+        <td>{{ v.gnomad_af_display }}</td>
+        <td>{% if v.cadd is not none %}{{ "%.1f" | format(v.cadd) }}{% else %}—{% endif %}</td>
+        <td>{% if v.revel is not none %}{{ "%.3f" | format(v.revel) }}{% else %}—{% endif %}</td>
+        <td>{{ v.clinvar or '—' }}</td>
+        <td style="font-size:11px;">{{ v.criteria }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:#666;font-style:italic;">No VUS variants to display.</p>
+  {% endif %}
+</div>
+
+<!-- Tier 3: Benign -->
+{% if include_benign and tier3_variants %}
+<div class="section">
+  <h2>Tier 3: Likely Benign &amp; Benign</h2>
+  <p style="font-size:13px;color:#666;">{{ tier3_variants | length }} variants classified as likely benign or benign.</p>
+  <details>
+    <summary style="cursor:pointer;color:#1565c0;">Show benign variants</summary>
+    <table>
+      <thead><tr><th>Gene</th><th>Variant</th><th>Classification</th><th>gnomAD AF</th><th>Criteria</th></tr></thead>
+      <tbody>
+      {% for v in tier3_variants %}
+        <tr>
+          <td>{{ v.gene }}</td>
+          <td>{{ v.chrom }}:{{ v.pos }} {{ v.ref }}&gt;{{ v.alt }}</td>
+          <td>{{ v.classification }}</td>
+          <td>{{ v.gnomad_af_display }}</td>
+          <td style="font-size:11px;">{{ v.criteria }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </details>
+</div>
+{% endif %}
+
+<!-- QC Summary -->
+{% if qc_metrics %}
+<div class="section">
+  <h2>Quality Control Summary</h2>
+  <div class="variant-details">
+    {% if qc_metrics.mean_depth is defined %}
+    <div class="detail-item"><div class="detail-label">Mean Depth</div><div class="detail-value">{{ qc_metrics.mean_depth }}x</div></div>
+    {% endif %}
+    {% if qc_metrics.ti_tv_ratio is defined %}
+    <div class="detail-item"><div class="detail-label">Ti/Tv Ratio</div><div class="detail-value">{{ qc_metrics.ti_tv_ratio }}</div></div>
+    {% endif %}
+    {% if qc_metrics.het_hom_ratio is defined %}
+    <div class="detail-item"><div class="detail-label">Het/Hom Ratio</div><div class="detail-value">{{ qc_metrics.het_hom_ratio }}</div></div>
+    {% endif %}
+    {% if qc_metrics.pass_rate is defined %}
+    <div class="detail-item"><div class="detail-label">PASS Rate</div><div class="detail-value">{{ "%.1f" | format(qc_metrics.pass_rate * 100) }}%</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Methodology -->
+<div class="section">
+  <div class="methodology">
+    <h3>Methodology &amp; Limitations</h3>
+    <ul>
+      <li><strong>Variant calling:</strong> Input VCF analyzed with {{ adapter_type }} adapter</li>
+      <li><strong>Annotation:</strong> Ensembl VEP v114 (consequence, HGVS, in-silico predictions)</li>
+      <li><strong>Databases:</strong> ClinVar, gnomAD v4.1 (exomes)</li>
+      <li><strong>Classification:</strong> ACMG/AMP 2015 guidelines (Richards et al.) with ClinGen SVI refinements</li>
+      <li><strong>In-silico thresholds:</strong> CADD ≥25.3, REVEL ≥0.644, SpliceAI ≥0.2 (ClinGen SVI recommended)</li>
+      {% if has_phenotype %}
+      <li><strong>Phenotype integration:</strong> FHIR clinical data used for variant-phenotype correlation</li>
+      {% endif %}
+    </ul>
+    <p style="margin-top:10px;"><strong>Limitations:</strong> This report is for research use only. Automated classification should be reviewed by a clinical geneticist. Not all ACMG criteria can be fully automated (PS3, BS3, PP1, BS2, BS4, BP5 require manual curation). Mosaic variants and complex structural variants are not assessed.</p>
+  </div>
+</div>
+
+<div class="report-footer">
+  <p>Generated by Variant-to-Function Reporter v{{ pipeline_version }} | {{ report_date }}</p>
+  <p>For research use only. Not a clinical diagnostic report.</p>
+</div>
+
+</div>
+</body>
+</html>

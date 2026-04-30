@@ -1,0 +1,38 @@
+{
+  "panel_name": "Neurogenetics Panel",
+  "version": "1.0",
+  "description": "Genes associated with inherited neurological disorders",
+  "gene_count": 60,
+  "genes": [
+    "APP", "ATXN1", "ATXN2", "ATXN3", "ATXN7",
+    "C9orf72", "CACNA1A", "CLN3", "CLN5", "CLN6", "CLN8",
+    "DCTN1", "DYNC1H1",
+    "FIG4", "FUS",
+    "GBA", "GJB1", "GRN",
+    "HEXA", "HTT",
+    "KCNQ2",
+    "LRRK2",
+    "MAPT", "MFN2", "MPZ",
+    "NEFH", "NEFL", "NOTCH3",
+    "OPTN",
+    "PARK2", "PARK7", "PINK1", "PLP1", "PMP22", "PRNP", "PSEN1", "PSEN2",
+    "RAB7A",
+    "SCN1A", "SCN2A", "SCN8A", "SETX", "SGSH", "SLC6A3",
+    "SMN1", "SMN2", "SNCA", "SOD1", "SPART", "SPG11", "SQSTM1",
+    "TARDBP", "TBP", "TREM2",
+    "UBQLN2",
+    "VAPB", "VCP", "VPS35",
+    "WDR45"
+  ],
+  "conditions": [
+    "Alzheimer Disease (familial)",
+    "Parkinson Disease (familial)",
+    "Amyotrophic Lateral Sclerosis (ALS)",
+    "Huntington Disease",
+    "Charcot-Marie-Tooth Disease",
+    "Spinal Muscular Atrophy",
+    "Spinocerebellar Ataxia",
+    "Epilepsy (monogenic)",
+    "CADASIL"
+  ]
+}

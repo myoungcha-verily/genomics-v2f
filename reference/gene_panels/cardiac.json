@@ -1,0 +1,37 @@
+{
+  "panel_name": "Comprehensive Cardiac Panel",
+  "version": "2.0",
+  "description": "Genes associated with inherited cardiac conditions including cardiomyopathy, arrhythmia, and aortopathy",
+  "gene_count": 82,
+  "genes": [
+    "ABCC9", "ACTC1", "ACTN2", "ANK2", "ANKRD1",
+    "BAG3", "CACNA1C", "CACNB2", "CALM1", "CALM2", "CALM3",
+    "CASQ2", "CAV3", "CRYAB", "CSRP3", "DES", "DMD",
+    "DSC2", "DSG2", "DSP", "DTNA", "EMD",
+    "EYA4", "FHL2", "FKTN", "FLNC", "GAA",
+    "GLA", "HCN4", "JPH2", "JUP",
+    "KCNE1", "KCNE2", "KCNH2", "KCNJ2", "KCNJ5", "KCNQ1",
+    "LAMA4", "LAMP2", "LDB3", "LMNA",
+    "MYBPC3", "MYH6", "MYH7", "MYL2", "MYL3", "MYOZ2",
+    "MYPN", "NEXN", "NKX2-5",
+    "PKP2", "PLN", "PRDM16", "PRKAG2",
+    "RAF1", "RBM20", "RYR2",
+    "SCN5A", "SGCD", "SLC25A4",
+    "TAZ", "TCAP", "TMEM43", "TNNC1", "TNNI3", "TNNT2",
+    "TPM1", "TRDN", "TRPM4", "TTN", "TTR",
+    "VCL",
+    "ACTA2", "COL3A1", "FBN1", "FBN2", "MYH11",
+    "SMAD3", "TGFB2", "TGFBR1", "TGFBR2"
+  ],
+  "conditions": [
+    "Hypertrophic Cardiomyopathy (HCM)",
+    "Dilated Cardiomyopathy (DCM)",
+    "Arrhythmogenic Right Ventricular Cardiomyopathy (ARVC)",
+    "Long QT Syndrome (LQTS)",
+    "Brugada Syndrome",
+    "Catecholaminergic Polymorphic Ventricular Tachycardia (CPVT)",
+    "Marfan Syndrome",
+    "Loeys-Dietz Syndrome",
+    "Familial Thoracic Aortic Aneurysm"
+  ]
+}

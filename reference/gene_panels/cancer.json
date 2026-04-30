@@ -1,0 +1,41 @@
+{
+  "panel_name": "Hereditary Cancer Panel",
+  "version": "2.0",
+  "description": "Genes associated with hereditary cancer predisposition syndromes",
+  "gene_count": 84,
+  "genes": [
+    "APC", "ATM", "ATR", "AXIN2",
+    "BAP1", "BARD1", "BLM", "BMPR1A", "BRCA1", "BRCA2", "BRIP1",
+    "CASR", "CDC73", "CDH1", "CDK4", "CDKN1C", "CDKN2A", "CEBPA",
+    "CHEK2", "CTNNA1",
+    "DICER1", "DIS3L2",
+    "EGFR", "ELANE", "EPCAM",
+    "FANCA", "FANCB", "FANCC", "FANCD2", "FANCE", "FANCF", "FANCG",
+    "FH", "FLCN",
+    "GATA2", "GPC3",
+    "HOXB13", "HRAS",
+    "KIF1B", "KIT",
+    "LZTR1",
+    "MAX", "MEN1", "MET", "MITF", "MLH1", "MSH2", "MSH6", "MUTYH",
+    "NBN", "NF1", "NF2",
+    "PALB2", "PDGFRA", "PHOX2B", "PMS2", "POLD1", "POLE",
+    "POT1", "PRKAR1A", "PTCH1", "PTEN",
+    "RAD50", "RAD51C", "RAD51D", "RB1", "RECQL4", "REST", "RET", "RUNX1",
+    "SDHA", "SDHAF2", "SDHB", "SDHC", "SDHD", "SMAD4", "SMARCA4", "SMARCB1",
+    "STK11", "SUFU",
+    "TMEM127", "TP53", "TSC1", "TSC2",
+    "VHL",
+    "WRN", "WT1"
+  ],
+  "conditions": [
+    "Hereditary Breast and Ovarian Cancer (HBOC)",
+    "Lynch Syndrome",
+    "Li-Fraumeni Syndrome",
+    "Familial Adenomatous Polyposis (FAP)",
+    "Cowden Syndrome",
+    "Retinoblastoma",
+    "Von Hippel-Lindau Disease",
+    "Multiple Endocrine Neoplasia",
+    "Peutz-Jeghers Syndrome"
+  ]
+}

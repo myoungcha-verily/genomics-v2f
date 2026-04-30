@@ -1,0 +1,20 @@
+{
+  "name": "Genomics V2F Reporter",
+  "image": "us-central1-docker.pkg.dev/verily-modules/workbench-apps/jupyter-server-base:latest",
+  "features": {},
+  "postCreateCommand": "bash quickstart.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter"
+      ]
+    }
+  },
+  "forwardPorts": [8080],
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "16gb",
+    "storage": "50gb"
+  }
+}

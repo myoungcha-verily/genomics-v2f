@@ -1,0 +1,31 @@
+{
+  "review_status_to_stars": {
+    "practice guideline": 4,
+    "reviewed by expert panel": 3,
+    "criteria provided, multiple submitters, no conflicts": 2,
+    "criteria provided, conflicting classifications": 1,
+    "criteria provided, single submitter": 1,
+    "no assertion criteria provided": 0,
+    "no classification provided": 0,
+    "no classification for the single variant": 0
+  },
+  "classification_mapping": {
+    "Pathogenic": "P",
+    "Likely pathogenic": "LP",
+    "Uncertain significance": "VUS",
+    "Likely benign": "LB",
+    "Benign": "B",
+    "Pathogenic/Likely pathogenic": "P/LP",
+    "Benign/Likely benign": "B/LB",
+    "Conflicting classifications of pathogenicity": "VUS",
+    "not provided": null,
+    "drug response": null,
+    "risk factor": null,
+    "association": null,
+    "protective": null,
+    "Affects": null,
+    "other": null
+  },
+  "actionable_classifications": ["Pathogenic", "Likely pathogenic", "Pathogenic/Likely pathogenic"],
+  "benign_classifications": ["Benign", "Likely benign", "Benign/Likely benign"]
+}

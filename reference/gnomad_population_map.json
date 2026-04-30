@@ -1,0 +1,26 @@
+{
+  "populations": {
+    "afr": {"name": "African/African American", "abbreviation": "AFR"},
+    "amr": {"name": "Admixed American / Latino", "abbreviation": "AMR"},
+    "asj": {"name": "Ashkenazi Jewish", "abbreviation": "ASJ"},
+    "eas": {"name": "East Asian", "abbreviation": "EAS"},
+    "fin": {"name": "Finnish", "abbreviation": "FIN"},
+    "mid": {"name": "Middle Eastern", "abbreviation": "MID"},
+    "nfe": {"name": "Non-Finnish European", "abbreviation": "NFE"},
+    "sas": {"name": "South Asian", "abbreviation": "SAS"},
+    "remaining": {"name": "Remaining", "abbreviation": "OTH"}
+  },
+  "frequency_fields": {
+    "global": "AF",
+    "popmax": "AF_popmax",
+    "per_population_prefix": "AF_"
+  },
+  "thresholds": {
+    "ba1_standalone_benign": 0.05,
+    "bs1_strong_benign": 0.01,
+    "pm2_absent_pathogenic": 0.0001,
+    "common_variant": 0.01,
+    "rare_variant": 0.001,
+    "ultra_rare_variant": 0.0001
+  }
+}

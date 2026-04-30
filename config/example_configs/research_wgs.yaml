@@ -1,0 +1,50 @@
+# Example: Research whole-genome sequencing with FHIR phenotype integration
+input:
+  adapter: single_sample
+  vcf_path: "gs://my-bucket/wgs/sample_001.vcf.gz"
+  reference_genome: GRCh38
+
+annotation:
+  vep_mode: docker
+  vep_cache_dir: "/data/vep_cache"
+  enable_cadd: true
+  enable_revel: true
+  enable_spliceai: true
+  enable_alphamissense: true
+
+databases:
+  clinvar:
+    bq_table: "bigquery-public-data.human_variant_annotation.clinvar_hg38"
+  gnomad:
+    bq_table: "bigquery-public-data.gnomAD.v4_1_0_exomes__variant_results"
+  dbnsfp:
+    enabled: true
+    bq_table: "my-project.reference_data.dbnsfp_v4_9"
+
+acmg:
+  ba1_threshold: 0.05
+  bs1_threshold: 0.01
+  pm2_threshold: 0.0001
+
+phenotype:
+  enabled: true
+  fhir_project: "my-project"
+  fhir_dataset: "fhir_data"
+  condition_table: "Condition"
+  observation_table: "Observation"
+  omim_mapping: true
+  hpo_matching: true
+  boost_phenotype_match: 2.0
+
+output:
+  gcs_bucket: "gs://my-bucket/"
+  gcs_prefix: "genomics-v2f/sample_001/"
+  report_format: html
+  include_vus: true
+  max_vus_in_report: 100
+  include_benign: false
+
+pipeline:
+  stages: "all"
+  max_workers: 8
+  log_level: DEBUG

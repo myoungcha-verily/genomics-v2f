@@ -1,0 +1,39 @@
+# Example: Trio whole-exome sequencing (proband + parents)
+input:
+  adapter: trio
+  vcf_path: "data/vcf/family_001.vcf.gz"
+  reference_genome: GRCh38
+  trio:
+    proband_id: "CHILD_001"
+    father_id: "FATHER_001"
+    mother_id: "MOTHER_001"
+    ped_file: ""  # Optional: path to PED file
+
+annotation:
+  vep_mode: docker
+  enable_cadd: true
+  enable_revel: true
+  enable_spliceai: true
+  enable_alphamissense: true
+
+databases:
+  clinvar:
+    bq_table: "bigquery-public-data.human_variant_annotation.clinvar_hg38"
+  gnomad:
+    bq_table: "bigquery-public-data.gnomAD.v4_1_0_exomes__variant_results"
+
+acmg:
+  ba1_threshold: 0.05
+  bs1_threshold: 0.01
+  pm2_threshold: 0.0001
+  enable_segregation: true  # Enable PS2, PM6 for de novo detection
+
+phenotype:
+  enabled: false
+
+output:
+  report_format: html
+  include_vus: true
+
+pipeline:
+  stages: "all"

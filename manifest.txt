@@ -1,0 +1,66 @@
+# V2F Reporter — Package Manifest
+# Generated: 2026-04-30 19:17:43 UTC
+# File count: 59
+# Total size: 274 KB (281318 bytes)
+#
+# MD5  Size(bytes)  Path
+# ─────────────────────────────────────────────
+b8c6b6d66a3e1e67c2640156f3ff5f92      7056  genomics-v2f-reporter/adapters/base_adapter.py
+f0a0b8d01a50c86a0d322a4c739f5b59      5537  genomics-v2f-reporter/adapters/gvcf_adapter.py
+5ed1359483965fd549cba8a70cca6313       705  genomics-v2f-reporter/adapters/__init__.py
+e910db059585991dac425b46fcd38328      4016  genomics-v2f-reporter/adapters/panel_adapter.py
+e5e714e05ef0ebf224ddd9c4a9bdfe20      6433  genomics-v2f-reporter/adapters/single_sample_adapter.py
+6f006d41bca3c64f526c95fbd428e881     11700  genomics-v2f-reporter/adapters/trio_adapter.py
+5e8a3ca5918aa950705da29168432e4a      5112  genomics-v2f-reporter/CLAUDE.md
+809707f8eede9c3c3f7d699b3a930984       755  genomics-v2f-reporter/config/example_configs/panel_targeted.yaml
+03c3caea02a02516f7c858587a8185b0      1145  genomics-v2f-reporter/config/example_configs/research_wgs.yaml
+d410c71a6b627649ed6612db89e74b13       678  genomics-v2f-reporter/config/example_configs/single_sample_wes.yaml
+6980f5e07e8079b8195a8156daf6ca10       848  genomics-v2f-reporter/config/example_configs/trio_wes.yaml
+f84f1f28164a86e6805180d016adcde4      3552  genomics-v2f-reporter/config/pipeline_config.yaml
+7a8e3105a68cff4e43da77c7b736bb2e     10235  genomics-v2f-reporter/dashboard/app.py
+5339cf3e54820e700a0f8559287ca803     17323  genomics-v2f-reporter/dashboard/templates/index.html
+231d8ede949483aa2437099da151e7dc      7386  genomics-v2f-reporter/data_profiler.py
+0b29233601890221e1bb97705b0840fc       449  genomics-v2f-reporter/.devcontainer.json
+0475a14a390de0d96a90cb70b8539954       336  genomics-v2f-reporter/.gitignore
+a0c6be81b102087761df7127a78b1305     10011  genomics-v2f-reporter/INSTALL.md
+69ccb776272e2ab67497f076b1c47c39      5213  genomics-v2f-reporter/pipeline/01_vcf_ingest_qc.py
+3f76ef029f2938f48beea829424609c4      7788  genomics-v2f-reporter/pipeline/02_annotate_variants.py
+c71e1d3a9ed7c370ce54cf5671b25ea4      9739  genomics-v2f-reporter/pipeline/03_database_enrichment.py
+48cb96d96b9c98bb0398cf0e94e2cc53      4867  genomics-v2f-reporter/pipeline/04_acmg_classification.py
+164ceb859014d9a40e80d664e5060389      5050  genomics-v2f-reporter/pipeline/05_phenotype_integration.py
+bf8e9d3e90472b779a8e00f03bcc12aa      3773  genomics-v2f-reporter/pipeline/06_report_generation.py
+b0efe805b6a8e0f7f6299b43db842258      7371  genomics-v2f-reporter/pipeline/07_validation.py
+d41d8cd98f00b204e9800998ecf8427e         0  genomics-v2f-reporter/pipeline/__init__.py
+d5dc9a6517f37b89a67576d8a30915cc      5886  genomics-v2f-reporter/pipeline/utils/acmg_engine.py
+9111a23ecf7aa2bf0046b0664983f61c     10102  genomics-v2f-reporter/pipeline/utils/acmg_rules.py
+cd754700f1dfbbfc1df544aec629822c       862  genomics-v2f-reporter/pipeline/utils/_clinvar_stars.py
+8d18b023f6201990990e8370ab0b3140      3088  genomics-v2f-reporter/pipeline/utils/consequence_mapper.py
+cb527878c3fe21dacc30fee4dbe58401      7617  genomics-v2f-reporter/pipeline/utils/fhir_phenotype.py
+ba1fa9a1e5038dc92352c5597d48ac1b      2876  genomics-v2f-reporter/pipeline/utils/gene_disease.py
+ed2aa5ab1f2c56e3490303167ff76df4      3061  genomics-v2f-reporter/pipeline/utils/hgvs_formatter.py
+d41d8cd98f00b204e9800998ecf8427e         0  genomics-v2f-reporter/pipeline/utils/__init__.py
+30ed2fb143fca946b1861dca7753825c      3837  genomics-v2f-reporter/pipeline/utils/in_silico_scores.py
+fb1a6606b0df56ba23b4968baa559635      2769  genomics-v2f-reporter/pipeline/utils/population_freq.py
+e7e0981c74c1a924b05921c0ec6d2f53      6564  genomics-v2f-reporter/pipeline/utils/report_renderer.py
+14b06ad89537242aa9b3c50847df5803      6434  genomics-v2f-reporter/pipeline/utils/vcf_parser.py
+3b0fda005ef05f5538d5c8c98710377e      9592  genomics-v2f-reporter/pipeline/utils/vep_runner.py
+5d52b640310d77e847962c2f94a8a360      2098  genomics-v2f-reporter/quickstart.sh
+4699b611fa324860e56616902c41d30c      2621  genomics-v2f-reporter/README.md
+15cc4b3da199728ae80bc3df3c936eb3      9313  genomics-v2f-reporter/reference/acmg_criteria_spec.json
+68ece4eceb227021269719c0be6d1ece      1990  genomics-v2f-reporter/reference/acmg_strength_rules.json
+4db5f24a19cebeef6ea82e49919e8c53      1055  genomics-v2f-reporter/reference/clinvar_stars_mapping.json
+2ee4219cb413e45000081704dfd2c74c      3285  genomics-v2f-reporter/reference/consequence_severity.json
+4504f1adbb2cba8c09709f1f56d29672      1333  genomics-v2f-reporter/reference/gene_panels/cancer.json
+191f4b81d43f78f891768155022fd587      1369  genomics-v2f-reporter/reference/gene_panels/cardiac.json
+7dfa35a59d172dd5d23cf8f49980d535       359  genomics-v2f-reporter/reference/gene_panels/custom_template.json
+78601801070e14a0ff381ceea75717a2      1057  genomics-v2f-reporter/reference/gene_panels/neuro.json
+84b256374e337cd0715d477d57b38224       925  genomics-v2f-reporter/reference/gnomad_population_map.json
+b21b9a2c7f77875cda75c5d61feafa4a       465  genomics-v2f-reporter/requirements.txt
+db9e3e5bc0da5bb60cc35815e068e7a9     14069  genomics-v2f-reporter/run_pipeline.py
+dc10645b49b2bbda6114834e2a3a2e84      3689  genomics-v2f-reporter/scripts/benchmark_clinvar.py
+c9f25cbbcba946f22148beacf8e15f10      2779  genomics-v2f-reporter/scripts/create_workspace.sh
+0f2d5082971f259efd0daf582b21ba22      6376  genomics-v2f-reporter/scripts/package_v2f.sh
+b0e68a35ff0483663c37cad0ef3c7a8e       681  genomics-v2f-reporter/scripts/refresh_clinvar.sh
+e155150731236251bea36d2cdfac891e     11828  genomics-v2f-reporter/setup_wizard.py
+d2ce4826eead7a0d51c6bb9e9c7d0838     11603  genomics-v2f-reporter/templates/proband_report.html
+6f54e0593a3544fca7dfe01e803f7643      4657  genomics-v2f-reporter/templates/report.css
