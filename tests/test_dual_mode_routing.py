@@ -119,6 +119,64 @@ def test_both_mode_populates_both_columns(tmp_path, repo_root, monkeypatch):
     assert out.iloc[0]["amp_tier"] == "I"
 
 
+def test_germline_mode_writes_bayesian_columns_with_float_dtype(
+        tmp_path, repo_root, monkeypatch):
+    """Regression: BA1 standalone benign produces log2_odds_ratio = -inf,
+    which previously got serialized as the string '-inf', mixing types
+    in the parquet column and causing pyarrow conversion to fail."""
+    monkeypatch.chdir(tmp_path)
+    df = pd.DataFrame([
+        # BA1 firing variant: very common in gnomAD
+        {"variant_id": "chr1_100_A_T", "chrom": "chr1", "pos": 100,
+         "ref": "A", "alt": "T", "sample_id": "S1",
+         "gene": "FAKEGENE", "hgvs_p": "p.A1B",
+         "consequence": "missense_variant", "severity": "MODERATE",
+         "gnomad_af": 0.10,  # > BA1 threshold of 0.05 → standalone benign
+         "clinvar_classification": "", "clinvar_review_stars": 0,
+         "cadd_phred": 5.0, "revel": 0.05,
+         "spliceai_max": 0.0, "alphamissense": 0.05,
+         "genotype": "0/1", "read_depth": 80, "allele_fraction": 0.5,
+         "allele_depth_alt": 40, "allele_depth_ref": 40,
+         "qual": 99.0, "filter": "PASS", "gt_quality": 99.0},
+        # Normal variant: PVS1 → finite log2_or
+        {"variant_id": "chr17_43106478_T_G", "chrom": "chr17", "pos": 43106478,
+         "ref": "T", "alt": "G", "sample_id": "S1",
+         "gene": "BRCA1", "hgvs_p": "p.Cys61Gly",
+         "consequence": "missense_variant", "severity": "MODERATE",
+         "gnomad_af": 0.0, "clinvar_classification": "Pathogenic",
+         "clinvar_review_stars": 4,
+         "cadd_phred": 28.0, "revel": 0.85, "spliceai_max": 0.04,
+         "alphamissense": 0.91,
+         "genotype": "0/1", "read_depth": 80, "allele_fraction": 0.5,
+         "allele_depth_alt": 40, "allele_depth_ref": 40,
+         "qual": 99.0, "filter": "PASS", "gt_quality": 99.0},
+    ])
+    out = tmp_path / "data" / "enriched" / "variants_enriched.parquet"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(out, index=False)
+
+    stage4 = _load_stage4(repo_root)
+    config = {
+        "input": {"analysis_mode": "germline"},
+        "output": {"output_dir": "data"},
+        "acmg": {"ba1_threshold": 0.05, "bs1_threshold": 0.01,
+                  "pm2_threshold": 0.0001},
+    }
+    # This is the call that previously raised pyarrow conversion error
+    stage4.run(config)
+
+    # The parquet should have written cleanly with bayesian_log2_or as float
+    output = pd.read_parquet(tmp_path / "data" / "classified" / "acmg_results.parquet")
+    assert "bayesian_log2_or" in output.columns
+    # Column dtype should be float — mixing float + str fails pyarrow
+    assert output["bayesian_log2_or"].dtype.kind == "f"
+    # The BA1-override row should have -inf
+    ba1_row = output[output.gene == "FAKEGENE"]
+    assert len(ba1_row) == 1
+    import math
+    assert math.isinf(ba1_row.iloc[0]["bayesian_log2_or"])
+
+
 def test_stage5_skipped_in_somatic_mode(tmp_path, repo_root, monkeypatch):
     monkeypatch.chdir(tmp_path)
     # Seed a classified parquet (stage 5 reads from there)

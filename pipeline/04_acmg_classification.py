@@ -113,9 +113,11 @@ def run(config: dict) -> dict:
                     prior=prior,
                 )
                 row_record["bayesian_posterior_prob"] = round(bayes["posterior_prob"], 4)
+                # Keep as float so the parquet column has a uniform dtype.
+                # BA1 overrides yield -inf; pyarrow handles float('-inf') natively.
+                lor = bayes["log2_odds_ratio"]
                 row_record["bayesian_log2_or"] = (
-                    "-inf" if bayes["log2_odds_ratio"] == float("-inf")
-                    else round(bayes["log2_odds_ratio"], 2))
+                    float("-inf") if lor == float("-inf") else round(float(lor), 2))
                 row_record["bayesian_classification"] = (
                     bayesian_acmg.classify_from_posterior(bayes["posterior_prob"]))
             classifications.append(row_record)
