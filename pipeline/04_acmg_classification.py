@@ -70,14 +70,30 @@ def run(config: dict) -> dict:
 
         if mode in ("germline", "both"):
             result = classify_variant(variant_dict, config)
-            classifications.append({
+            row_record = {
                 "variant_id": row["variant_id"],
                 "acmg_classification": result["classification"],
                 "acmg_criteria": result["evidence_summary"],
                 "acmg_tier": classification_tier(result["classification"]),
                 "n_pathogenic_criteria": result["n_pathogenic_criteria"],
                 "n_benign_criteria": result["n_benign_criteria"],
-            })
+            }
+            # Bayesian ACMG posterior alongside the categorical call
+            from pipeline.utils import bayesian_acmg
+            if bayesian_acmg.is_enabled(config):
+                prior = bayesian_acmg.get_prior(variant_dict.get("gene", ""), config)
+                bayes = bayesian_acmg.compute_posterior(
+                    result["pathogenic_criteria"],
+                    result["benign_criteria"],
+                    prior=prior,
+                )
+                row_record["bayesian_posterior_prob"] = round(bayes["posterior_prob"], 4)
+                row_record["bayesian_log2_or"] = (
+                    "-inf" if bayes["log2_odds_ratio"] == float("-inf")
+                    else round(bayes["log2_odds_ratio"], 2))
+                row_record["bayesian_classification"] = (
+                    bayesian_acmg.classify_from_posterior(bayes["posterior_prob"]))
+            classifications.append(row_record)
             criteria_details.append({
                 "variant_id": row["variant_id"],
                 "criteria_met": result["criteria_met"],

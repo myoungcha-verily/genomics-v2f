@@ -1,0 +1,26 @@
+{
+  "gene": "MYBPC3",
+  "vcep_id": "Cardiomyopathy",
+  "vcep_full_name": "ClinGen Cardiomyopathy VCEP (HCM)",
+  "version": "2023-08",
+  "source": "https://clinicalgenome.org/affiliation/50007/",
+  "overrides": {
+    "PVS1": {
+      "strict_lof": true,
+      "_note": "MYBPC3 PVS1 IS applicable (haploinsufficiency mechanism — opposite of MYH7)"
+    },
+    "PM2": {
+      "threshold": 0.00004,
+      "strength": "supporting"
+    },
+    "BS1": {
+      "threshold": 0.00004
+    },
+    "PP2": {
+      "applicable": false,
+      "_note": "PP2 NOT applicable for MYBPC3 (high background missense)"
+    }
+  },
+  "custom_criteria": [],
+  "_notes": "Note opposite PVS1 stance from MYH7 despite same VCEP — gene-specific mechanism matters."
+}

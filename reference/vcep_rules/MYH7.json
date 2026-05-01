@@ -1,0 +1,28 @@
+{
+  "gene": "MYH7",
+  "vcep_id": "Cardiomyopathy",
+  "vcep_full_name": "ClinGen Cardiomyopathy VCEP (HCM)",
+  "version": "2023-08",
+  "source": "https://clinicalgenome.org/affiliation/50007/",
+  "overrides": {
+    "PVS1": {
+      "applicable": false,
+      "_note": "Cardiomyopathy VCEP: PVS1 NOT applicable to MYH7 — LoF is not a known disease mechanism"
+    },
+    "PM2": {
+      "threshold": 0.00004,
+      "strength": "supporting",
+      "_note": "Cardiomyopathy VCEP: PM2_supporting at MAF < 0.00004"
+    },
+    "BS1": {
+      "threshold": 0.00004,
+      "_note": "MYH7 BS1 = 0.00004; reflects sarcomere gene low background"
+    },
+    "PP2": {
+      "applicable": true,
+      "_note": "PP2 applicable for MYH7 (low rate of benign missense per Walsh 2017)"
+    }
+  },
+  "custom_criteria": [],
+  "_notes": "MYH7 is canonical example of where generic PVS1 over-calls — VCEP override is essential."
+}

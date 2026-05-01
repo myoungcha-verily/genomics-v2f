@@ -1,0 +1,25 @@
+{
+  "gene": "SCN5A",
+  "vcep_id": "ChannelopathyAndCardiomyopathy",
+  "vcep_full_name": "ClinGen Channelopathy and Cardiomyopathy VCEP (LQTS3 / Brugada)",
+  "version": "2024-01",
+  "source": "https://clinicalgenome.org/affiliation/50012/",
+  "overrides": {
+    "PM2": {
+      "threshold": 0.00004,
+      "strength": "supporting"
+    },
+    "BS1": {
+      "threshold": 0.0001
+    },
+    "PVS1": {
+      "strict_lof": false,
+      "_note": "SCN5A LoF disease mechanism varies by transcript — PVS1 case-by-case"
+    },
+    "PP2": {
+      "applicable": true
+    }
+  },
+  "custom_criteria": [],
+  "_notes": "SCN5A spans LQTS3, Brugada, conduction disease — phenotype-specific reasoning often needed."
+}

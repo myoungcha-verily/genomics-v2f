@@ -29,6 +29,10 @@ def classify_variant(variant: dict, config: dict) -> Dict:
         benign_criteria: list of triggered benign criteria
         evidence_summary: str
     """
+    # Apply gene-specific VCEP overrides (no-op if no rule file for this gene)
+    from pipeline.utils.vcep_loader import merge_vcep_overrides
+    config = merge_vcep_overrides(variant, config)
+
     acmg_cfg = config.get("acmg", {})
 
     # Evaluate all criteria
@@ -51,6 +55,9 @@ def classify_variant(variant: dict, config: dict) -> Dict:
             continue
         if name in ("PS2", "PM6", "PM3") and not acmg_cfg.get(
                 "enable_segregation", True):
+            continue
+        if name in ("PS3", "BS3") and not acmg_cfg.get(
+                "enable_functional", False):
             continue
 
         triggered, strength, evidence = eval_fn(variant, config)

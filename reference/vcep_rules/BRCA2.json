@@ -1,0 +1,25 @@
+{
+  "gene": "BRCA2",
+  "vcep_id": "ENIGMA",
+  "vcep_full_name": "ENIGMA BRCA1/2 Variant Curation Expert Panel",
+  "version": "2024-03",
+  "source": "https://clinicalgenome.org/affiliation/50087/",
+  "overrides": {
+    "PM2": {
+      "threshold": 0.00001,
+      "strength": "supporting",
+      "_note": "ENIGMA SVI: PM2 downgraded to supporting; threshold 1/100,000"
+    },
+    "BS1": {
+      "threshold": 0.001,
+      "_note": "BRCA2 BS1 lowered to 0.001"
+    },
+    "PVS1": {
+      "strict_lof": true,
+      "exclude_last_exon": false,
+      "_note": "BRCA2 PVS1 applies through last 10% of protein (different from BRCA1)"
+    }
+  },
+  "custom_criteria": [],
+  "_notes": "Note BRCA2 PVS1 differs from BRCA1: terminal truncations may still be pathogenic."
+}

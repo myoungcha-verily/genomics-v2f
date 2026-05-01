@@ -24,7 +24,14 @@ Result = Tuple[bool, str, str]  # (triggered, strength, evidence_text)
 # ========== PATHOGENIC CRITERIA ==========
 
 def eval_pvs1(variant: dict, config: dict) -> Result:
-    """PVS1: Null variant in a gene where LoF is a known mechanism of disease."""
+    """PVS1: Null variant in a gene where LoF is a known mechanism of disease.
+
+    Honors VCEP overrides:
+      - strict_lof: require canonical LoF consequence (default true)
+      - exclude_last_exon: do not invoke PVS1 for truncations in the last
+        exon (e.g. MYH7 — LoF is not a disease mechanism for this gene)
+    """
+    from pipeline.utils.vcep_loader import get_override
     consequence = variant.get("consequence", "")
     gene = variant.get("gene", "")
 
@@ -33,6 +40,13 @@ def eval_pvs1(variant: dict, config: dict) -> Result:
 
     consequences = consequence.split("&")
     is_null = any(c.strip() in LOF_CONSEQUENCES for c in consequences)
+
+    pvs1_ov = get_override("PVS1", config) or {}
+    # VCEP says PVS1 is not applicable at all (e.g. MYH7 — LoF is not a
+    # disease mechanism)
+    if pvs1_ov.get("applicable") is False:
+        return False, "very_strong", \
+            f"PVS1 not applicable per {config['acmg'].get('vcep_id', 'VCEP')} rules for {gene}"
 
     if is_null and is_lof_gene(gene):
         return True, "very_strong", \
@@ -142,7 +156,11 @@ def eval_pp2(variant: dict, config: dict) -> Result:
 
 
 def eval_pp3(variant: dict, config: dict) -> Result:
-    """PP3: Computational evidence supports damaging effect."""
+    """PP3: Computational evidence supports damaging effect.
+
+    Returns the calibrated strength (supporting / moderate / strong) per
+    Pejaver/ClinGen 2022 when annotation.use_calibrated_tiers is true.
+    """
     scores = {
         "cadd_phred": variant.get("cadd_phred"),
         "revel": variant.get("revel"),
@@ -152,7 +170,8 @@ def eval_pp3(variant: dict, config: dict) -> Result:
     result = interpret_scores(scores, config)
 
     if result["pp3"]:
-        return True, "supporting", result["summary"]
+        strength = result.get("pp3_strength") or "supporting"
+        return True, strength, result["summary"]
     return False, "supporting", ""
 
 
@@ -234,7 +253,11 @@ def eval_bp4(variant: dict, config: dict) -> Result:
     result = interpret_scores(scores, config)
 
     if result["bp4"]:
-        return True, "supporting", result["summary"]
+        strength = result.get("bp4_strength") or "supporting"
+        # ACMG/AMP combination grid has no 'moderate' benign tier; clamp.
+        if strength == "moderate":
+            strength = "supporting"
+        return True, strength, result["summary"]
     return False, "supporting", ""
 
 
@@ -262,6 +285,38 @@ def eval_bp7(variant: dict, config: dict) -> Result:
     return False, "supporting", ""
 
 
+def eval_ps3(variant: dict, config: dict) -> Result:
+    """PS3: Well-established functional studies show damaging effect.
+
+    Looks up the variant's protein change in MaveDB (bundled fallback +
+    optional BQ mirror). Strength is 'strong' by default; ClinGen SVI
+    allows downgrade to 'moderate' or 'supporting' depending on assay
+    quality, but for now we emit 'strong' when MaveDB returns 'damaging'.
+    """
+    from pipeline.utils.functional_scores import lookup_mavedb, is_enabled
+    if not is_enabled(config):
+        return False, "strong", ""
+    res = lookup_mavedb(variant.get("gene", ""),
+                         variant.get("hgvs_p", ""),
+                         config)
+    if res.get("tier") == "PS3":
+        return True, "strong", res["evidence"]
+    return False, "strong", ""
+
+
+def eval_bs3(variant: dict, config: dict) -> Result:
+    """BS3: Well-established functional studies show no damaging effect."""
+    from pipeline.utils.functional_scores import lookup_mavedb, is_enabled
+    if not is_enabled(config):
+        return False, "strong", ""
+    res = lookup_mavedb(variant.get("gene", ""),
+                         variant.get("hgvs_p", ""),
+                         config)
+    if res.get("tier") == "BS3":
+        return True, "strong", res["evidence"]
+    return False, "strong", ""
+
+
 # ========== ALL CRITERIA ==========
 
 ALL_CRITERIA = {
@@ -269,6 +324,7 @@ ALL_CRITERIA = {
     "PVS1": eval_pvs1,
     "PS1": eval_ps1,
     "PS2": eval_ps2,
+    "PS3": eval_ps3,  # Functional evidence (MaveDB) — gated on acmg.enable_functional
     "PM1": eval_pm1,
     "PM2": eval_pm2,
     "PM3": eval_pm3,
@@ -282,6 +338,7 @@ ALL_CRITERIA = {
     # Benign
     "BA1": eval_ba1,
     "BS1": eval_bs1,
+    "BS3": eval_bs3,  # Functional evidence — gated on acmg.enable_functional
     "BP1": eval_bp1,
     "BP3": eval_bp3,
     "BP4": eval_bp4,

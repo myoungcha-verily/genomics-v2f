@@ -1,0 +1,25 @@
+{
+  "gene": "KCNQ1",
+  "vcep_id": "LongQT",
+  "vcep_full_name": "ClinGen Long QT Syndrome VCEP",
+  "version": "2024-01",
+  "source": "https://clinicalgenome.org/affiliation/50012/",
+  "overrides": {
+    "PM2": {
+      "threshold": 0.00004,
+      "strength": "supporting"
+    },
+    "BS1": {
+      "threshold": 0.0001,
+      "_note": "LQTS VCEP BS1 = 0.0001 (rare disease, allele frequency reasoning)"
+    },
+    "PVS1": {
+      "strict_lof": true
+    },
+    "PP3": {
+      "_note": "REVEL >= 0.7 for KCNQ1 PP3 per LQTS VCEP recommendation"
+    }
+  },
+  "custom_criteria": [],
+  "_notes": "LQTS VCEP uses functional patch-clamp evidence for PS3 — DMS not yet standard."
+}

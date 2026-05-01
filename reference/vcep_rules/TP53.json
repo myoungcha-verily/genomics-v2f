@@ -1,0 +1,26 @@
+{
+  "gene": "TP53",
+  "vcep_id": "TP53_VCEP",
+  "vcep_full_name": "TP53 Variant Curation Expert Panel (Li-Fraumeni)",
+  "version": "2024-02",
+  "source": "https://clinicalgenome.org/affiliation/50013/",
+  "overrides": {
+    "PM2": {
+      "threshold": 0.00002,
+      "strength": "supporting"
+    },
+    "BS1": {
+      "threshold": 0.0003,
+      "_note": "TP53 VCEP: tumor suppressor allele frequency reasoning; BS1 = 0.0003"
+    },
+    "PVS1": {
+      "strict_lof": true,
+      "_note": "Splice-site PVS1 requires functional confirmation per TP53 VCEP"
+    },
+    "PP3": {
+      "_note": "TP53 VCEP: bespoke evolutionary action score (EAp53) recommended over generic predictors"
+    }
+  },
+  "custom_criteria": [],
+  "_notes": "Hotspot residues (R175, R248, R273, R282) get PM5 strength uplift to strong."
+}

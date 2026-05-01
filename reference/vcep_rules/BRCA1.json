@@ -1,0 +1,28 @@
+{
+  "gene": "BRCA1",
+  "vcep_id": "ENIGMA",
+  "vcep_full_name": "ENIGMA BRCA1/2 Variant Curation Expert Panel",
+  "version": "2024-03",
+  "source": "https://clinicalgenome.org/affiliation/50087/",
+  "overrides": {
+    "PM2": {
+      "threshold": 0.00001,
+      "strength": "supporting",
+      "_note": "ENIGMA SVI: PM2 downgraded to supporting; threshold 1/100,000 in non-Founder pop"
+    },
+    "BS1": {
+      "threshold": 0.001,
+      "_note": "BRCA1 BS1 lowered to 0.001 (founder-mutation accommodation)"
+    },
+    "PVS1": {
+      "strict_lof": true,
+      "_note": "ENIGMA: full-length protein required; truncations distal to last 10% should not invoke PVS1"
+    },
+    "PP1": {
+      "strength": "moderate",
+      "_note": "Strong segregation evidence promotes PP1 to moderate per ENIGMA"
+    }
+  },
+  "custom_criteria": [],
+  "_notes": "ENIGMA VCEP rules incorporate gene-specific functional assay calibration (Findlay 2018 saturation editing) under PS3."
+}

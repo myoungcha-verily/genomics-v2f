@@ -1,0 +1,26 @@
+{
+  "gene": "PTEN",
+  "vcep_id": "PTEN_VCEP",
+  "vcep_full_name": "PTEN Hamartoma Tumor Syndrome VCEP",
+  "version": "2024-01",
+  "source": "https://clinicalgenome.org/affiliation/50028/",
+  "overrides": {
+    "PM2": {
+      "threshold": 0.000005,
+      "strength": "supporting",
+      "_note": "PTEN VCEP: stricter PM2 threshold (1/200,000) reflecting low background"
+    },
+    "BA1": {
+      "threshold": 0.001,
+      "_note": "BA1 lowered to 0.001 for PTEN (small case-control disequilibrium)"
+    },
+    "BS1": {
+      "threshold": 0.0001
+    },
+    "PP3": {
+      "_note": "PTEN VCEP uses REVEL >= 0.7 for PP3 (more permissive than generic 0.644)"
+    }
+  },
+  "custom_criteria": [],
+  "_notes": "Functional evidence (Mighell 2018 phosphatase activity DMS) feeds PS3 lookups."
+}

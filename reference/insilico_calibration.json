@@ -1,0 +1,40 @@
+{
+  "_source": "Pejaver et al. 2022 (PMID 36413997) — Calibration of in silico predictors for ACMG/AMP. Subsequent ClinGen SVI refinements 2023-2024.",
+  "_strength_levels": ["BP4_strong", "BP4_moderate", "BP4_supporting", "indeterminate", "PP3_supporting", "PP3_moderate", "PP3_strong"],
+  "REVEL": {
+    "_description": "Pejaver 2022 calibrated REVEL thresholds for ACMG strength tiers",
+    "BP4_strong": 0.016,
+    "BP4_moderate": 0.183,
+    "BP4_supporting": 0.290,
+    "PP3_supporting": 0.644,
+    "PP3_moderate": 0.773,
+    "PP3_strong": 0.932
+  },
+  "CADD": {
+    "_description": "ClinGen-recommended CADD thresholds with calibrated supporting/moderate tiers",
+    "BP4_strong": 5.0,
+    "BP4_moderate": 10.0,
+    "BP4_supporting": 15.0,
+    "PP3_supporting": 25.3,
+    "PP3_moderate": 28.0,
+    "PP3_strong": 32.0
+  },
+  "SpliceAI": {
+    "_description": "ClinGen recommended SpliceAI tiers (per ACMG SVI 2023 update)",
+    "BP4_strong": 0.05,
+    "BP4_moderate": 0.08,
+    "BP4_supporting": 0.10,
+    "PP3_supporting": 0.20,
+    "PP3_moderate": 0.50,
+    "PP3_strong": 0.80
+  },
+  "AlphaMissense": {
+    "_description": "Cheng et al. 2023 (PMID 37733941) recommended thresholds",
+    "BP4_strong": 0.10,
+    "BP4_moderate": 0.25,
+    "BP4_supporting": 0.340,
+    "PP3_supporting": 0.564,
+    "PP3_moderate": 0.85,
+    "PP3_strong": 0.95
+  }
+}
