@@ -27,12 +27,37 @@ logger = logging.getLogger(__name__)
 
 
 def run(config: dict) -> dict:
-    """Execute Stage 5: Phenotype Integration."""
+    """Execute Stage 5: Phenotype Integration.
+
+    Phenotype scoring assumes germline inheritance (FHIR Condition →
+    OMIM disease genes). For somatic-only analysis it provides no
+    signal and is skipped early.
+    """
     t0 = time.time()
     output_dir = config.get("output", {}).get("output_dir", "data")
     class_dir = os.path.join(output_dir, "classified")
     pheno_dir = os.path.join(output_dir, "phenotype")
     os.makedirs(pheno_dir, exist_ok=True)
+
+    mode = (config.get("input", {}) or {}).get("analysis_mode", "germline")
+    if mode == "somatic":
+        logger.info("Stage 5: skipped (analysis_mode=somatic — phenotype "
+                    "matching applies only to germline analysis)")
+        # Write a stub summary so downstream stages and the dashboard
+        # know the stage was intentionally skipped, not silently failed
+        out = {
+            "stage": "05_phenotype_integration",
+            "skipped_reason": "analysis_mode=somatic",
+            "matching_variants": 0,
+            "elapsed_seconds": round(time.time() - t0, 1),
+        }
+        with open(os.path.join(pheno_dir, "phenotype_summary.json"), "w") as f:
+            json.dump(out, f, indent=2)
+        # Touch a sentinel JSON so the dashboard's stage-5 indicator stays green
+        with open(os.path.join(pheno_dir, "patient_phenotype.json"), "w") as f:
+            json.dump({"skipped": True, "reason": "somatic mode"}, f)
+        print(f"\n{'='*60}\nStage 5 Skipped: somatic mode\n{'='*60}\n")
+        return out
 
     pheno_config = config.get("phenotype", {})
     enabled = pheno_config.get("enabled", False)

@@ -381,25 +381,35 @@ def api_phenotype_test():
 def api_demo_load():
     """Copy bundled demo VCF + precomputed outputs into the live data dirs.
 
-    After this returns, every dashboard tab has populated content the user
-    can click through — no pipeline run required.
+    Body (optional): {"mode": "germline" | "somatic"}. Defaults to germline.
     """
-    germline_dir = os.path.join(DEMO_DIR, "germline")
-    precomputed_dir = os.path.join(DEMO_DIR, "precomputed")
+    body = request.get_json(silent=True) or {}
+    mode = body.get("mode", "germline")
+    if mode not in ("germline", "somatic"):
+        return jsonify({"error": f"Unknown demo mode: {mode}"}), 400
 
-    if not os.path.isdir(germline_dir) or not os.path.isdir(precomputed_dir):
-        return jsonify({"error": "Demo data not bundled in this build"}), 500
+    if mode == "germline":
+        src_demo_dir = os.path.join(DEMO_DIR, "germline")
+        precomputed_dir = os.path.join(DEMO_DIR, "precomputed")
+        vcf_basename = "proband.vcf.gz"
+    else:  # somatic
+        src_demo_dir = os.path.join(DEMO_DIR, "somatic")
+        precomputed_dir = os.path.join(DEMO_DIR, "precomputed_somatic")
+        vcf_basename = "tumor_normal.vcf.gz"
+
+    if not os.path.isdir(src_demo_dir) or not os.path.isdir(precomputed_dir):
+        return jsonify({"error": f"{mode} demo data not bundled in this build"}), 500
 
     # 1. Copy demo VCF + tabix index into data/vcf/
     vcf_dst_dir = os.path.join(PROJECT_DIR, "data", "vcf")
     os.makedirs(vcf_dst_dir, exist_ok=True)
-    for fname in ("proband.vcf.gz", "proband.vcf.gz.tbi"):
-        src = os.path.join(germline_dir, fname)
+    for fname in (vcf_basename, vcf_basename + ".tbi"):
+        src = os.path.join(src_demo_dir, fname)
         if os.path.exists(src):
             shutil.copy2(src, os.path.join(vcf_dst_dir, fname))
 
     # 2. Install demo config
-    demo_config = os.path.join(germline_dir, "config.yaml")
+    demo_config = os.path.join(src_demo_dir, "config.yaml")
     if os.path.exists(demo_config):
         os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
         shutil.copy2(demo_config, CONFIG_PATH)
@@ -426,7 +436,8 @@ def api_demo_load():
 
     return jsonify({
         "loaded": True,
-        "vcf": "data/vcf/proband.vcf.gz",
+        "mode": mode,
+        "vcf": f"data/vcf/{vcf_basename}",
         "config": "config/pipeline_config.yaml",
         "variants": n_variants,
     })

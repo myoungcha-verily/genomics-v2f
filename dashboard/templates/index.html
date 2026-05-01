@@ -166,8 +166,12 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
 <div id="tab-setup" class="tab-panel">
   <div id="demoSetupCard" class="card" style="border-left:4px solid #2e7d32;background:#f1f8e9;">
     <h3 id="demoSetupHeading" style="color:#1b5e20;">New here? Try the bundled demo</h3>
-    <p id="demoSetupBody" style="color:#33691e;margin:6px 0 12px;">Loads a small synthetic VCF (10 variants across BRCA1, TP53, MYH7, PTEN, BRCA2) plus pre-computed pipeline outputs so every tab populates instantly. No external data needed.</p>
-    <button id="demoSetupBtn" class="btn btn-primary" onclick="loadDemo()" style="background:#2e7d32;">Load demo data</button>
+    <p id="demoSetupBody" style="color:#33691e;margin:6px 0 12px;">Two demos available:
+      <strong>Germline</strong> — 10 variants across BRCA1/TP53/MYH7/PTEN/BRCA2 classified with ACMG/AMP.
+      <strong>Somatic</strong> — 7 variants across BRAF/EGFR/TP53/KRAS/PIK3CA classified with AMP/ASCO/CAP four-tier framework.
+      Each loads pre-computed pipeline outputs so every tab populates instantly.</p>
+    <button id="demoSetupBtn" class="btn btn-primary" onclick="loadDemo('germline')" style="background:#2e7d32;">Load germline demo</button>
+    <button id="demoSetupBtnSomatic" class="btn btn-primary" onclick="loadDemo('somatic')" style="background:#7b1fa2;margin-left:8px;">Load somatic demo</button>
     <span id="demoSetupStatus" style="margin-left:14px;font-size:13px;color:#33691e;"></span>
   </div>
   <div class="card">
@@ -181,6 +185,15 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
       <label><input type="radio" name="w_adapter" value="trio"> Trio (proband + parents — enables PS2/PM6 de novo)</label>
       <label><input type="radio" name="w_adapter" value="panel"> Targeted gene panel</label>
       <label><input type="radio" name="w_adapter" value="gvcf"> gVCF / band format</label>
+      <label><input type="radio" name="w_adapter" value="somatic"> Somatic (tumor-only or tumor-normal pair)</label>
+    </div>
+
+    <div class="wizard-step" style="border-left:4px solid #7b1fa2;">
+      <h4><span class="step-num" style="background:#7b1fa2;">1.5</span>Analysis mode</h4>
+      <p class="help">Determines which classification framework is applied. Germline runs ACMG/AMP 2015. Somatic runs AMP/ASCO/CAP 2017 (4-tier) and skips phenotype matching. <strong>Both</strong> runs both engines and writes both column families.</p>
+      <label><input type="radio" name="w_mode" value="germline" checked> Germline (inherited disease — ACMG/AMP)</label>
+      <label><input type="radio" name="w_mode" value="somatic"> Somatic (tumor — AMP/ASCO/CAP)</label>
+      <label><input type="radio" name="w_mode" value="both"> Both (paired germline + somatic analysis)</label>
     </div>
 
     <div class="wizard-step">
@@ -276,11 +289,19 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
     <div class="filter-bar">
       <select id="filterClass" onchange="loadVariants()">
         <option value="">All Classifications</option>
-        <option value="Pathogenic">Pathogenic</option>
-        <option value="Likely pathogenic">Likely Pathogenic</option>
-        <option value="VUS">VUS</option>
-        <option value="Likely benign">Likely Benign</option>
-        <option value="Benign">Benign</option>
+        <optgroup label="ACMG germline">
+          <option value="Pathogenic">Pathogenic</option>
+          <option value="Likely pathogenic">Likely Pathogenic</option>
+          <option value="VUS">VUS</option>
+          <option value="Likely benign">Likely Benign</option>
+          <option value="Benign">Benign</option>
+        </optgroup>
+        <optgroup label="AMP somatic" id="filterClassAmpGroup">
+          <option value="AMP Tier I">AMP Tier I — Strong clinical significance</option>
+          <option value="AMP Tier II">AMP Tier II — Potential clinical significance</option>
+          <option value="AMP Tier III">AMP Tier III — Unknown clinical significance</option>
+          <option value="AMP Tier IV">AMP Tier IV — Benign / Likely benign</option>
+        </optgroup>
       </select>
       <input id="filterGene" type="text" placeholder="Gene filter..." onkeyup="loadVariants()">
       <span id="variantCount" style="color:#666;font-size:13px;"></span>
@@ -319,7 +340,8 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
   <div id="demoSettingsCard" class="card" style="border-left:4px solid #f9a825;background:#fff8e1;">
     <h3 style="color:#e65100;">Demo data controls <span id="demoSettingsBadge" class="hidden" style="background:#2e7d32;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:600;letter-spacing:.5px;">ACTIVE</span></h3>
     <p style="color:#5d4037;margin:6px 0 12px;">Load the bundled demo to populate every tab with synthetic data, or reset to the empty first-run state for a clean walkthrough.</p>
-    <button id="demoSettingsLoadBtn" class="btn btn-primary" onclick="loadDemo()" style="background:#2e7d32;">Load demo data</button>
+    <button id="demoSettingsLoadBtn" class="btn btn-primary" onclick="loadDemo('germline')" style="background:#2e7d32;">Load germline demo</button>
+    <button id="demoSettingsLoadBtnSomatic" class="btn btn-primary" onclick="loadDemo('somatic')" style="background:#7b1fa2;margin-left:6px;">Load somatic demo</button>
     <button class="btn btn-sm" onclick="resetDemo()" style="margin-left:8px;background:#d32f2f;color:#fff;">Reset to first-run state</button>
     <span id="demoResetStatus" style="margin-left:14px;font-size:13px;"></span>
   </div>
@@ -496,20 +518,25 @@ function _toast(msg, color) {
   setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
-function loadDemo() {
+function loadDemo(mode) {
+  mode = mode || 'germline';
   const setupEl = document.getElementById('demoSetupStatus');
   const resetEl = document.getElementById('demoResetStatus');
   if (setupEl) { setupEl.textContent = 'Loading…'; setupEl.style.color = '#33691e'; }
   if (resetEl) { resetEl.textContent = 'Loading…'; resetEl.style.color = '#33691e'; }
-  fetch('api/demo/load', {method:'POST'}).then(r=>r.json()).then(data => {
+  fetch('api/demo/load', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({mode: mode}),
+  }).then(r=>r.json()).then(data => {
     if (data.error) {
       _toast('Demo load failed: ' + data.error, '#d32f2f');
       if (setupEl) { setupEl.textContent = 'Failed: ' + data.error; setupEl.style.color = '#d32f2f'; }
       return;
     }
-    _toast(`Demo loaded — ${data.variants} variants ready in Variants tab`);
-    if (setupEl) setupEl.textContent = `Loaded ${data.variants} variants. Click Variants or Reports to explore.`;
-    if (resetEl) resetEl.textContent = `Loaded ${data.variants} variants.`;
+    _toast(`${mode} demo loaded — ${data.variants} variants ready in Variants tab`);
+    if (setupEl) setupEl.textContent = `Loaded ${mode} demo (${data.variants} variants). Click Variants or Reports to explore.`;
+    if (resetEl) resetEl.textContent = `Loaded ${mode} demo (${data.variants} variants).`;
     document.getElementById('firstRunBanner').classList.add('hidden');
     refreshStatus();
     checkDemoLoaded();
@@ -594,31 +621,49 @@ function runPipeline() {
     });
 }
 
-// Detect "demo loaded" by checking for the DEMO_PROBAND report; flip every
-// piece of demo-state UI consistently across tabs.
+// Detect demo state by checking for either DEMO_PROBAND (germline) or
+// DEMO_TUMOR (somatic) report; flip the demo-state UI accordingly.
 function checkDemoLoaded() {
   fetch('api/reports').then(r=>r.json()).then(data => {
-    const active = (data.reports || []).some(r => r.sample_id === "DEMO_PROBAND");
+    const reports = data.reports || [];
+    const germlineActive = reports.some(r => r.sample_id === "DEMO_PROBAND");
+    const somaticActive = reports.some(r => r.sample_id === "DEMO_TUMOR");
+    const active = germlineActive || somaticActive;
+    const which = somaticActive ? 'somatic' : (germlineActive ? 'germline' : null);
+
     const pipeNotice = document.getElementById('demoLoadedNotice');
     if (pipeNotice) pipeNotice.classList.toggle('hidden', !active);
     const headerBadge = document.getElementById('demoActiveBadge');
-    if (headerBadge) headerBadge.classList.toggle('hidden', !active);
+    if (headerBadge) {
+      headerBadge.classList.toggle('hidden', !active);
+      if (active) {
+        headerBadge.textContent = which === 'somatic' ? 'DEMO · SOMATIC' : 'DEMO · GERMLINE';
+        headerBadge.style.background = which === 'somatic' ? '#7b1fa2' : '#2e7d32';
+      }
+    }
     const settingsBadge = document.getElementById('demoSettingsBadge');
-    if (settingsBadge) settingsBadge.classList.toggle('hidden', !active);
+    if (settingsBadge) {
+      settingsBadge.classList.toggle('hidden', !active);
+      if (active) settingsBadge.textContent = which.toUpperCase() + ' ACTIVE';
+    }
     const setupHeading = document.getElementById('demoSetupHeading');
     const setupBody = document.getElementById('demoSetupBody');
-    const setupBtn = document.getElementById('demoSetupBtn');
-    const settingsBtn = document.getElementById('demoSettingsLoadBtn');
+    const setupBtnG = document.getElementById('demoSetupBtn');
+    const setupBtnS = document.getElementById('demoSetupBtnSomatic');
+    const settingsBtnG = document.getElementById('demoSettingsLoadBtn');
+    const settingsBtnS = document.getElementById('demoSettingsLoadBtnSomatic');
     if (active) {
-      if (setupHeading) setupHeading.textContent = 'Demo data is loaded';
-      if (setupBody) setupBody.textContent = 'All 7 stages have curated outputs. Open Variants or Reports to explore. Reset from the Settings tab to clear.';
-      if (setupBtn) { setupBtn.textContent = 'Already loaded'; setupBtn.disabled = true; setupBtn.style.opacity = '0.6'; setupBtn.style.cursor = 'not-allowed'; }
-      if (settingsBtn) { settingsBtn.disabled = true; settingsBtn.style.opacity = '0.6'; settingsBtn.style.cursor = 'not-allowed'; }
+      if (setupHeading) setupHeading.textContent = `${which.charAt(0).toUpperCase() + which.slice(1)} demo is loaded`;
+      if (setupBody) setupBody.innerHTML = 'All stages have curated outputs. Open <strong>Variants</strong> or <strong>Reports</strong> to explore. Reset from Settings to clear, then load the other demo if you like.';
+      [setupBtnG, setupBtnS, settingsBtnG, settingsBtnS].forEach(b => {
+        if (b) { b.disabled = true; b.style.opacity = '0.5'; b.style.cursor = 'not-allowed'; }
+      });
     } else {
-      if (setupHeading) setupHeading.textContent = 'New here? Try the bundled demo';
-      if (setupBody) setupBody.textContent = 'Loads a small synthetic VCF (10 variants across BRCA1, TP53, MYH7, PTEN, BRCA2) plus pre-computed pipeline outputs so every tab populates instantly. No external data needed.';
-      if (setupBtn) { setupBtn.textContent = 'Load demo data'; setupBtn.disabled = false; setupBtn.style.opacity = '1'; setupBtn.style.cursor = 'pointer'; }
-      if (settingsBtn) { settingsBtn.disabled = false; settingsBtn.style.opacity = '1'; settingsBtn.style.cursor = 'pointer'; }
+      if (setupHeading) setupHeading.textContent = 'New here? Try the bundled demos';
+      if (setupBody) setupBody.innerHTML = 'Two demos available: <strong>Germline</strong> — 10 variants across BRCA1/TP53/MYH7/PTEN/BRCA2 classified with ACMG/AMP. <strong>Somatic</strong> — 7 variants across BRAF/EGFR/TP53/KRAS/PIK3CA classified with AMP/ASCO/CAP four-tier framework.';
+      [setupBtnG, setupBtnS, settingsBtnG, settingsBtnS].forEach(b => {
+        if (b) { b.disabled = false; b.style.opacity = '1'; b.style.cursor = 'pointer'; }
+      });
     }
   }).catch(()=>{});
 }
@@ -786,6 +831,8 @@ function loadSetup() {
     const phen = cfg.phenotype || {};
     const adapter = input.adapter || 'single_sample';
     document.querySelector(`input[name=w_adapter][value="${adapter}"]`)?.click();
+    const mode = input.analysis_mode || 'germline';
+    document.querySelector(`input[name=w_mode][value="${mode}"]`)?.click();
     document.getElementById('w_vcf').value = input.vcf_path || '';
     const ref = input.reference_genome || 'GRCh38';
     document.querySelector(`input[name=w_ref][value="${ref}"]`)?.click();
@@ -804,6 +851,7 @@ function saveSetup() {
     cfg = cfg || {};
     cfg.input = cfg.input || {};
     cfg.input.adapter = document.querySelector('input[name=w_adapter]:checked').value;
+    cfg.input.analysis_mode = document.querySelector('input[name=w_mode]:checked').value;
     cfg.input.vcf_path = document.getElementById('w_vcf').value.trim();
     cfg.input.reference_genome = document.querySelector('input[name=w_ref]:checked').value;
     cfg.annotation = cfg.annotation || {};

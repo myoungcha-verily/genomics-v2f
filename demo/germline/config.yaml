@@ -2,6 +2,7 @@
 # Auto-installed by /api/demo/load — safe to overwrite.
 input:
   adapter: single_sample
+  analysis_mode: germline
   vcf_path: data/vcf/proband.vcf.gz
   reference_genome: GRCh38
 

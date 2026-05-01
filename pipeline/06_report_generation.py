@@ -22,8 +22,88 @@ from pipeline.utils.report_renderer import render_proband_report
 logger = logging.getLogger(__name__)
 
 
+def _render_somatic_inline(proband_df, proband_id, config, output_path):
+    """Minimal inline somatic report. Used when analysis_mode is 'somatic'.
+
+    Avoids the germline Jinja template (which assumes phenotype + ACMG
+    columns) and emphasizes the somatic-specific data: AMP tiers, drug
+    targets, VAF.
+    """
+    from datetime import datetime
+    rows_html = []
+    df_sorted = proband_df.copy()
+    tier_rank = {"I": 0, "II": 1, "III": 2, "IV": 3}
+    if "amp_tier" in df_sorted.columns:
+        df_sorted["_rank"] = df_sorted["amp_tier"].map(tier_rank).fillna(4)
+        df_sorted = df_sorted.sort_values("_rank")
+
+    for _, r in df_sorted.iterrows():
+        amp_tier = r.get("amp_tier", "?")
+        drugs = r.get("amp_drug_targets", "") or ""
+        vaf = float(r.get("tumor_vaf") or r.get("allele_fraction") or 0.0)
+        gene = r.get("gene", "")
+        hgvs_p = r.get("hgvs_p", "")
+        rows_html.append(
+            f"<tr><td><strong>{gene}</strong></td>"
+            f"<td>{r.get('chrom','')}:{r.get('pos','')}</td>"
+            f"<td>{hgvs_p}</td>"
+            f"<td><span class='tier tier-{amp_tier}'>Tier {amp_tier}</span></td>"
+            f"<td>{vaf:.2f}</td>"
+            f"<td style='font-size:11px;'>{drugs[:200]}</td>"
+            f"<td style='font-size:11px;'>{(r.get('amp_evidence','') or '')[:160]}</td></tr>"
+        )
+
+    n_total = len(df_sorted)
+    n_t1 = int((df_sorted.get("amp_tier") == "I").sum()) if "amp_tier" in df_sorted.columns else 0
+    n_t2 = int((df_sorted.get("amp_tier") == "II").sum()) if "amp_tier" in df_sorted.columns else 0
+
+    html = f"""<!DOCTYPE html><html><head><meta charset='UTF-8'>
+<title>V2F Somatic Report — {proband_id}</title>
+<style>
+body{{font-family:'Segoe UI',sans-serif;max-width:1200px;margin:24px auto;padding:0 20px;color:#333}}
+h1{{color:#7b1fa2;border-bottom:2px solid #7b1fa2;padding-bottom:8px}}
+h2{{color:#4a148c;margin-top:28px}}
+table{{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}}
+th,td{{padding:8px 10px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}}
+th{{background:#f3e5f5}}
+.tier{{display:inline-block;padding:2px 8px;border-radius:3px;color:#fff;font-weight:600;font-size:11px}}
+.tier-I{{background:#c62828}}.tier-II{{background:#ef6c00}}.tier-III{{background:#fbc02d;color:#333}}.tier-IV{{background:#2e7d32}}
+.summary{{display:flex;gap:14px;margin-top:14px}}
+.card{{flex:1;background:#fafafa;border-radius:6px;padding:14px;text-align:center}}
+.card .v{{font-size:24px;font-weight:700;color:#7b1fa2}}
+.card .l{{font-size:11px;text-transform:uppercase;color:#888;letter-spacing:1px}}
+</style></head><body>
+<h1>V2F Somatic Variant Report — {proband_id}</h1>
+<p style='color:#666'>Framework: AMP/ASCO/CAP 2017 four-tier somatic interpretation guidelines.<br>
+Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</p>
+
+<div class="summary">
+  <div class="card"><div class="v">{n_total}</div><div class="l">Total variants</div></div>
+  <div class="card"><div class="v">{n_t1}</div><div class="l">Tier I</div></div>
+  <div class="card"><div class="v">{n_t2}</div><div class="l">Tier II</div></div>
+</div>
+
+<h2>Classified Somatic Variants</h2>
+<table>
+<thead><tr><th>Gene</th><th>Position</th><th>Protein change</th><th>AMP tier</th><th>VAF</th><th>Drug targets</th><th>Evidence</th></tr></thead>
+<tbody>
+{''.join(rows_html) if rows_html else '<tr><td colspan="7" style="text-align:center;color:#999;">No variants</td></tr>'}
+</tbody>
+</table>
+</body></html>"""
+    with open(output_path, "w") as f:
+        f.write(html)
+    return output_path
+
+
 def run(config: dict) -> dict:
-    """Execute Stage 6: Report Generation."""
+    """Execute Stage 6: Report Generation.
+
+    Routes per analysis_mode:
+      'germline' / 'both' -> existing Jinja-based germline report
+      'somatic'           -> inline minimal somatic report
+                             (emphasizes AMP tiers + drug targets + VAF)
+    """
     t0 = time.time()
     output_dir = config.get("output", {}).get("output_dir", "data")
     reports_dir = config.get("output", {}).get("reports_dir", "reports")
@@ -31,7 +111,8 @@ def run(config: dict) -> dict:
     pheno_dir = os.path.join(output_dir, "phenotype")
     os.makedirs(reports_dir, exist_ok=True)
 
-    logger.info("Stage 6: Report Generation")
+    mode = (config.get("input", {}) or {}).get("analysis_mode", "germline")
+    logger.info(f"Stage 6: Report Generation (mode={mode})")
 
     # Load classified variants
     class_path = os.path.join(class_dir, "acmg_results.parquet")
@@ -70,14 +151,19 @@ def run(config: dict) -> dict:
 
         output_path = os.path.join(reports_dir, f"{proband_id}_report.html")
         try:
-            report_path = render_proband_report(
-                variants_df=proband_df,
-                proband_id=proband_id,
-                config=config,
-                phenotype=phenotype,
-                qc_metrics=qc_metrics,
-                output_path=output_path,
-            )
+            if mode == "somatic":
+                report_path = _render_somatic_inline(
+                    proband_df, proband_id, config, output_path)
+            else:
+                # germline or both — use the existing Jinja germline template
+                report_path = render_proband_report(
+                    variants_df=proband_df,
+                    proband_id=proband_id,
+                    config=config,
+                    phenotype=phenotype,
+                    qc_metrics=qc_metrics,
+                    output_path=output_path,
+                )
             reports_generated.append(report_path)
             logger.info(f"Report generated: {report_path}")
         except (FileNotFoundError, OSError) as e:

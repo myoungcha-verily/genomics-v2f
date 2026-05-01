@@ -1,6 +1,7 @@
 # Example: Single-sample whole-exome sequencing
 input:
   adapter: single_sample
+  analysis_mode: germline   # germline | somatic | both
   vcf_path: "data/vcf/NA12878.vcf.gz"
   reference_genome: GRCh38
 
@@ -16,11 +17,28 @@ databases:
     bq_table: "bigquery-public-data.human_variant_annotation.ncbi_clinvar_hg38_20180701"
   gnomad:
     bq_table: "bigquery-public-data.gnomAD.v3_genomes__chr{chrom}"
+  # Somatic knowledge bases — only used when analysis_mode includes 'somatic'
+  civic:
+    enabled: true
+    api_url: "https://civicdb.org/api/graphql"
+  oncokb:
+    enabled: false
+    api_token: ""
+    api_url: "https://www.oncokb.org/api/v1"
+  cosmic:
+    enabled: false
+    bq_table: ""
 
 acmg:
   ba1_threshold: 0.05
   bs1_threshold: 0.01
   pm2_threshold: 0.0001
+
+# Somatic-mode classifier (AMP/ASCO/CAP 2017 four-tier)
+acmg_amp:
+  vaf_min_somatic: 0.05
+  require_paired_normal: false
+  knowledge_base_priority: ["oncokb", "civic", "cosmic"]
 
 phenotype:
   enabled: false
