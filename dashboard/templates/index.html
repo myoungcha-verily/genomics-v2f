@@ -125,6 +125,7 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
   <div class="tab" onclick="showTab('pipeline', event)">Pipeline</div>
   <div class="tab" onclick="showTab('variants', event)">Variants</div>
   <div class="tab" onclick="showTab('reports', event)">Reports</div>
+  <div class="tab" onclick="showTab('curate', event)">Curate</div>
   <div class="tab" onclick="showTab('settings', event)">Settings</div>
 </div>
 
@@ -342,6 +343,48 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
   </div>
 </div>
 
+<!-- ===== CURATE ===== -->
+<div id="tab-curate" class="tab-panel">
+  <div class="card">
+    <h3>Manual literature curation</h3>
+    <p style="color:#666;margin-bottom:12px;">Add literature-backed evidence per variant. Curator entries override the automated engine call for that variant + criterion. Used for criteria the pipeline cannot fully automate: <strong>PS3/BS3</strong> (functional), <strong>PS4</strong> (case-control), <strong>PP1/BS4</strong> (segregation), and <strong>CNV Section 3</strong> (case literature).</p>
+    <div style="display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start;">
+      <div>
+        <h4 style="font-size:13px;color:#555;margin-bottom:8px;">Pick a variant</h4>
+        <div id="curateVariantList" style="max-height:480px;overflow-y:auto;border:1px solid #e0e0e0;border-radius:6px;background:#fafafa;font-size:12px;"></div>
+      </div>
+      <div>
+        <div id="curateDetail" style="display:none;">
+          <h4 id="curateHeading" style="font-size:14px;color:#1565c0;margin-bottom:8px;"></h4>
+          <div id="curateLitInfo" style="margin-bottom:12px;font-size:12px;color:#555;"></div>
+          <h5 style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;">Existing curations</h5>
+          <div id="curateExistingList" style="font-size:12px;color:#888;">No entries yet.</div>
+          <h5 style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;">Add a new entry</h5>
+          <div class="field-row"><label>Criterion</label><select id="curateCriterion">
+            <option>PS3</option><option>BS3</option><option>PS4</option><option>PP1</option><option>BS4</option><option>CNV_section_3</option>
+          </select></div>
+          <div class="field-row"><label>Action</label><select id="curateAction">
+            <option value="support_pathogenic">Support pathogenic</option>
+            <option value="support_benign">Support benign</option>
+            <option value="no_call">No call (informational)</option>
+          </select></div>
+          <div class="field-row"><label>Strength</label><select id="curateStrength">
+            <option>supporting</option><option>moderate</option><option>strong</option><option>very_strong</option><option>standalone</option>
+          </select></div>
+          <div class="field-row"><label>PMIDs (comma-separated)</label><input type="text" id="curatePmids" placeholder="29300386, 30209399"></div>
+          <div class="field-row"><label>Evidence text</label><input type="text" id="curateEvidence" placeholder="Cosegregation in family, 3 affecteds, lod=2.1"></div>
+          <div class="field-row"><label>Curator email</label><input type="text" id="curateEmail" placeholder="you@org.com"></div>
+          <div style="margin-top:10px;">
+            <button class="btn btn-primary" onclick="submitCuration()">Add curation entry</button>
+            <span id="curateStatus" style="margin-left:14px;font-size:12px;"></span>
+          </div>
+        </div>
+        <div id="curateEmpty" style="color:#888;font-size:13px;padding:24px;text-align:center;">Select a variant on the left to view literature + add curation evidence.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== SETTINGS ===== -->
 <div id="tab-settings" class="tab-panel">
   <div id="demoSettingsCard" class="card" style="border-left:4px solid #f9a825;background:#fff8e1;">
@@ -471,6 +514,7 @@ function showTab(name, evt) {
   if (name === 'setup') loadSetup();
   if (name === 'variants') loadVariants();
   if (name === 'reports') loadReports();
+  if (name === 'curate') loadCurateVariants();
   if (name === 'settings') { loadSettings(); loadPanels(); }
   if (name === 'overview' || name === 'pipeline') refreshStatus();
 }
@@ -1008,6 +1052,98 @@ function saveSettings() {
     loadConfig();
   }).catch(e => {
     const el = document.getElementById('settingsStatus'); el.textContent = 'Save failed'; el.style.color='#d32f2f';
+  });
+}
+
+// ===== Curate tab =====
+let _curateSelectedVariant = null;
+
+function loadCurateVariants() {
+  fetch('api/variants?per_page=200').then(r=>r.json()).then(data => {
+    const el = document.getElementById('curateVariantList');
+    if (!el) return;
+    if (!data.variants || !data.variants.length) {
+      el.innerHTML = '<div style="padding:14px;color:#999;">No variants. Run the pipeline or load a demo first.</div>';
+      return;
+    }
+    el.innerHTML = data.variants.map(v => {
+      const id = `${v.chrom||''}-${v.pos||''}-${v.ref||''}-${v.alt||''}`;
+      const cls = (v.acmg_classification||'').slice(0,12);
+      return `<div class="cur-row" data-id="${id}" data-gene="${v.gene||''}" data-hgvs="${v.hgvs_p||''}" style="padding:8px 10px;border-bottom:1px solid #eee;cursor:pointer;" onclick="selectCurateVariant('${id}', '${(v.gene||'').replace(/'/g, '')}', '${(v.hgvs_p||'').replace(/'/g, '')}')"><strong>${v.gene||'?'}</strong> ${v.hgvs_p||v.alt||''} <span style="float:right;color:#999;font-size:11px;">${cls}</span></div>`;
+    }).join('');
+  }).catch(()=>{});
+}
+
+function selectCurateVariant(variantId, gene, hgvsP) {
+  _curateSelectedVariant = {id: variantId, gene: gene, hgvs_p: hgvsP};
+  document.getElementById('curateEmpty').style.display = 'none';
+  document.getElementById('curateDetail').style.display = 'block';
+  document.getElementById('curateHeading').textContent = `${gene || '?'} ${hgvsP || ''} — ${variantId}`;
+  document.getElementById('curateLitInfo').innerHTML = 'Looking up literature…';
+
+  // Fetch LitVar literature
+  fetch('api/literature/' + encodeURIComponent(variantId)).then(r=>r.json()).then(lit => {
+    const li = document.getElementById('curateLitInfo');
+    if (lit.error) { li.innerHTML = `<span style="color:#888;">Literature lookup failed: ${lit.error}</span>`; return; }
+    if (!lit.found) { li.innerHTML = `<span style="color:#888;">No LitVar entry for ${gene} ${hgvsP}.</span>`; return; }
+    const pmidLinks = (lit.pubmed_ids || []).slice(0, 8).map(p =>
+      `<a href="https://pubmed.ncbi.nlm.nih.gov/${p}" target="_blank">${p}</a>`).join(', ');
+    li.innerHTML = `<strong>📚 ${lit.publication_count} publications</strong> (top ${(lit.pubmed_ids||[]).length} shown): ${pmidLinks}${lit.source_url ? ` &middot; <a href="${lit.source_url}" target="_blank">LitVar2</a>` : ''}`;
+  }).catch(e => {
+    document.getElementById('curateLitInfo').innerHTML = `<span style="color:#888;">Literature lookup failed.</span>`;
+  });
+
+  // Fetch existing curations
+  fetch('api/curation/' + encodeURIComponent(variantId)).then(r=>r.json()).then(d => {
+    const el = document.getElementById('curateExistingList');
+    if (!d.entries || !d.entries.length) {
+      el.innerHTML = '<span style="color:#999;">No entries yet for this variant.</span>';
+      return;
+    }
+    el.innerHTML = d.entries.map(e => {
+      const ts = e.created_at ? new Date(e.created_at * 1000).toISOString().slice(0,10) : '';
+      const pmids = e.pubmed_ids ? (Array.isArray(e.pubmed_ids) ? e.pubmed_ids.join(', ') : e.pubmed_ids) : '';
+      return `<div style="padding:6px 0;border-bottom:1px solid #f0f0f0;"><strong>${e.criterion}</strong> · ${e.action} · ${e.strength||''} <span style="color:#999;float:right;">${ts} · ${e.curator_email||''}</span><br><span style="font-size:11px;color:#555;">${e.evidence_text||''}${pmids ? ' (PMIDs: '+pmids+')' : ''}</span></div>`;
+    }).join('');
+  }).catch(()=>{});
+}
+
+function submitCuration() {
+  if (!_curateSelectedVariant) return;
+  const status = document.getElementById('curateStatus');
+  status.textContent = 'Saving…';
+  status.style.color = '#666';
+  const pmids = (document.getElementById('curatePmids').value || '')
+    .split(',').map(s => parseInt(s.trim())).filter(Boolean);
+  const body = {
+    variant_id: _curateSelectedVariant.id,
+    gene: _curateSelectedVariant.gene,
+    hgvs_p: _curateSelectedVariant.hgvs_p,
+    criterion: document.getElementById('curateCriterion').value,
+    action: document.getElementById('curateAction').value,
+    strength: document.getElementById('curateStrength').value,
+    pubmed_ids: pmids,
+    evidence_text: document.getElementById('curateEvidence').value,
+    curator_email: document.getElementById('curateEmail').value,
+  };
+  fetch('api/curation/' + encodeURIComponent(_curateSelectedVariant.id), {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  }).then(r=>r.json()).then(data => {
+    if (data.error) {
+      status.textContent = 'Error: ' + data.error;
+      status.style.color = '#d32f2f';
+      return;
+    }
+    status.textContent = 'Saved.';
+    status.style.color = '#2e7d32';
+    document.getElementById('curateEvidence').value = '';
+    document.getElementById('curatePmids').value = '';
+    selectCurateVariant(_curateSelectedVariant.id, _curateSelectedVariant.gene, _curateSelectedVariant.hgvs_p);
+  }).catch(e => {
+    status.textContent = 'Network error';
+    status.style.color = '#d32f2f';
   });
 }
 

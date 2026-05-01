@@ -1,0 +1,91 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "v2f-reporter"
+version = "0.4.0"
+description = "Variant-to-Function clinical genomics interpretation pipeline"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Proprietary"}
+authors = [{name = "V2F Reporter contributors"}]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+  "cyvcf2>=0.30.0",
+  "pysam>=0.22.0",
+  "pandas>=2.0.0",
+  "pyarrow>=14.0.0",
+  "numpy>=1.24.0",
+  "google-cloud-bigquery>=3.11.0",
+  "google-cloud-bigquery-storage>=2.24.0",
+  "google-cloud-storage>=2.14.0",
+  "db-dtypes>=1.2.0",
+  "pyyaml>=6.0.1",
+  "jsonschema>=4.20.0",
+  "jinja2>=3.1.2",
+  "markdown>=3.5.0",
+  "flask>=3.0.0",
+  "flask-cors>=4.0.0",
+  "fhir.resources>=7.0.0",
+  "requests>=2.31.0",
+  "tqdm>=4.66.0",
+  "colorama>=0.4.6",
+  "tabulate>=0.9.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0.0",
+  "pytest-mock>=3.12.0",
+  "pytest-cov>=4.1.0",
+]
+dev = [
+  "ruff>=0.5.0",
+  "mypy>=1.10.0",
+  "pre-commit>=3.7.0",
+  "bandit>=1.7.7",
+]
+
+[tool.setuptools]
+packages = ["adapters", "pipeline", "pipeline.utils", "dashboard"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+exclude = ["demo/", "reports/", "data/"]
+
+[tool.ruff.lint]
+# Pragmatic ruleset — enable as we go, not all at once
+select = ["E", "F", "W", "I", "B", "UP", "C4", "PIE", "RET", "SIM"]
+ignore = [
+  "E501",   # line length handled by formatter
+  "B008",   # function calls in default args (Flask uses this pattern)
+  "SIM108", # ternary preference (sometimes if/else is clearer)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011", "S101"]  # asserts allowed in tests
+"scripts/*" = ["E402"]  # imports after sys.path tweaks
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = false
+warn_unused_configs = true
+ignore_missing_imports = true   # third-party stubs are spotty
+exclude = ["demo/", "tests/", "scripts/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v --tb=short"
+
+[tool.bandit]
+exclude_dirs = ["tests", "demo", "scripts"]
+skips = ["B101"]  # assert_used: tests use asserts

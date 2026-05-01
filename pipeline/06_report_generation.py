@@ -57,6 +57,7 @@ def _render_somatic_inline(proband_df, proband_id, config, output_path):
     n_t1 = int((df_sorted.get("amp_tier") == "I").sum()) if "amp_tier" in df_sorted.columns else 0
     n_t2 = int((df_sorted.get("amp_tier") == "II").sum()) if "amp_tier" in df_sorted.columns else 0
 
+    # Manifest footer is appended to the report body just before </body>
     html = f"""<!DOCTYPE html><html><head><meta charset='UTF-8'>
 <title>V2F Somatic Report — {proband_id}</title>
 <style>
@@ -90,6 +91,7 @@ Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</p>
 {''.join(rows_html) if rows_html else '<tr><td colspan="7" style="text-align:center;color:#999;">No variants</td></tr>'}
 </tbody>
 </table>
+{config.get('_run_manifest_footer_html', '')}
 </body></html>"""
     with open(output_path, "w") as f:
         f.write(html)
@@ -113,6 +115,13 @@ def run(config: dict) -> dict:
 
     mode = (config.get("input", {}) or {}).get("analysis_mode", "germline")
     logger.info(f"Stage 6: Report Generation (mode={mode})")
+
+    # Snapshot the run manifest once per pipeline invocation
+    from pipeline.utils.run_manifest import write_manifest, manifest_footer_html
+    manifest = write_manifest(config, reports_dir)
+    # Make the rendered footer available to per-renderer code paths via config
+    config = dict(config)
+    config["_run_manifest_footer_html"] = manifest_footer_html(manifest)
 
     # Load classified variants
     class_path = os.path.join(class_dir, "acmg_results.parquet")

@@ -147,6 +147,58 @@ def section_2_dosage_genes(svtype: str, chrom: str, start: int, end: int,
     return {"score": score, "notes": notes}
 
 
+def section_3_literature(variant: dict, config: dict) -> Dict:
+    """Section 3: literature evidence. Previously left at zero (manual
+    curation only). Now sources two streams:
+
+      1. LitVar2: any pubmed hit for the affected gene → +0.10 (weak signal)
+      2. Curator entries (Curate tab) tagged with criterion='CNV_section_3':
+           support_pathogenic → +0.30 (supporting) / +0.50 (moderate) / +1.00 (strong)
+           support_benign → negative offsets of the same magnitude
+    """
+    score = 0.0
+    notes = []
+    gene = variant.get("gene", "")
+
+    # Curator overrides take precedence
+    try:
+        from pipeline.utils.curation_store import get_overrides_for_variant
+        for ov in get_overrides_for_variant(variant.get("variant_id", ""), config):
+            if ov.get("criterion") != "CNV_section_3":
+                continue
+            strength_score = {"supporting": 0.30, "moderate": 0.50,
+                              "strong": 1.00, "very_strong": 1.50}.get(
+                                ov.get("strength", "supporting"), 0.30)
+            if ov.get("action") == "support_pathogenic":
+                score += strength_score
+                notes.append(f"Section 3: curator (+{strength_score:.2f}) — "
+                             f"{(ov.get('evidence_text') or '')[:80]}")
+            elif ov.get("action") == "support_benign":
+                score -= strength_score
+                notes.append(f"Section 3: curator ({-strength_score:.2f}) — "
+                             f"{(ov.get('evidence_text') or '')[:80]}")
+    except Exception as e:
+        logger.warning(f"Section 3 curation lookup failed: {e}")
+
+    # LitVar contributes a weak prior if no curator entries
+    if score == 0.0 and gene:
+        try:
+            from pipeline.utils.litvar_client import query_litvar, is_enabled
+            if is_enabled(config):
+                lit = query_litvar(gene, hgvs_p="", timeout_s=5.0)
+                if lit.get("found") and lit.get("publication_count", 0) >= 3:
+                    score += 0.10
+                    notes.append(
+                        f"Section 3: {lit['publication_count']} LitVar publications "
+                        f"for {gene} (+0.10)")
+        except Exception as e:
+            logger.warning(f"Section 3 LitVar lookup failed: {e}")
+
+    if not notes:
+        notes.append("Section 3: no literature or curator evidence found")
+    return {"score": score, "notes": notes}
+
+
 def section_4_inheritance(variant: dict) -> Dict:
     """Section 4: family history + inheritance.
 
@@ -196,8 +248,7 @@ def classify_cnv(variant: dict, config: dict) -> Dict:
 
     s1 = section_1_genomic_content(svtype, end - start, n_genes)
     s2 = section_2_dosage_genes(svtype, chrom, start, end, ds)
-    # Section 3 (literature) requires manual curation — left at 0 for automated path
-    s3 = {"score": 0.0, "notes": ["Section 3: literature evidence requires manual curation"]}
+    s3 = section_3_literature(variant, config)
     s4 = section_4_inheritance(variant)
     s5 = section_5_population_frequency(variant)
 

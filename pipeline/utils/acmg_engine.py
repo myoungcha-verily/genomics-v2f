@@ -35,6 +35,16 @@ def classify_variant(variant: dict, config: dict) -> Dict:
 
     acmg_cfg = config.get("acmg", {})
 
+    # Pull any human-curated literature evidence overrides for this variant
+    curation_overrides = []
+    if (config.get("acmg", {}) or {}).get("enable_curation_overrides", True):
+        try:
+            from pipeline.utils.curation_store import get_overrides_for_variant
+            curation_overrides = get_overrides_for_variant(
+                variant.get("variant_id", ""), config) or []
+        except Exception as e:
+            logger.warning(f"curation lookup failed (continuing): {e}")
+
     # Evaluate all criteria
     criteria_met = []
     pathogenic_criteria = []
@@ -71,6 +81,40 @@ def classify_variant(variant: dict, config: dict) -> Dict:
                 pathogenic_criteria.append((name, strength))
             else:
                 benign_criteria.append((name, strength))
+
+    # Apply curation overrides — they replace or add to the engine's call.
+    # An override with action=support_pathogenic at strength X adds a
+    # pathogenic criterion; support_benign adds a benign one. If a curation
+    # explicitly mentions a criterion, it overrides the engine's automated
+    # call for that criterion.
+    overridden_criteria = set()
+    for ov in curation_overrides:
+        crit = ov.get("criterion", "")
+        action = ov.get("action", "")
+        strength = ov.get("strength", "supporting")
+        if action == "support_pathogenic":
+            # Replace any auto-fired entry for the same criterion
+            pathogenic_criteria = [c for c in pathogenic_criteria if c[0] != crit]
+            pathogenic_criteria.append((crit, strength))
+            overridden_criteria.add(crit)
+            criteria_met.append({
+                "criterion": crit,
+                "strength": strength,
+                "evidence": f"🧑‍⚕️ Curated: {ov.get('evidence_text', '')}"[:200],
+                "curated": True,
+                "curator": ov.get("curator_email", ""),
+            })
+        elif action == "support_benign":
+            benign_criteria = [c for c in benign_criteria if c[0] != crit]
+            benign_criteria.append((crit, strength))
+            overridden_criteria.add(crit)
+            criteria_met.append({
+                "criterion": crit,
+                "strength": strength,
+                "evidence": f"🧑‍⚕️ Curated: {ov.get('evidence_text', '')}"[:200],
+                "curated": True,
+                "curator": ov.get("curator_email", ""),
+            })
 
     # Combine evidence to classify
     classification = _combine_evidence(pathogenic_criteria, benign_criteria)

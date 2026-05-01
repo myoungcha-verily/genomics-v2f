@@ -377,6 +377,63 @@ def api_phenotype_test():
     return jsonify(result)
 
 
+@app.route("/api/curation/<variant_id>", methods=["GET"])
+def api_curation_list(variant_id):
+    """List curation entries for a variant."""
+    try:
+        from pipeline.utils.curation_store import list_curations
+    except Exception as e:
+        return jsonify({"error": f"import failed: {e}"}), 500
+    cfg = _load_config()
+    entries = list_curations(variant_id, cfg)
+    return jsonify({"variant_id": variant_id, "entries": entries})
+
+
+@app.route("/api/curation/<variant_id>", methods=["POST"])
+def api_curation_add(variant_id):
+    """Add a curation entry for a variant."""
+    try:
+        from pipeline.utils.curation_store import add_curation
+    except Exception as e:
+        return jsonify({"error": f"import failed: {e}"}), 500
+    body = request.get_json(silent=True) or {}
+    body["variant_id"] = variant_id
+    cfg = _load_config()
+    try:
+        stored = add_curation(body, cfg)
+        return jsonify({"stored": True, "entry": stored})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"unexpected: {e}"}), 500
+
+
+@app.route("/api/literature/<variant_id>", methods=["GET"])
+def api_literature(variant_id):
+    """Look up literature for a variant via LitVar2.
+
+    Variant id is chrom-pos-ref-alt; the gene + hgvs_p are taken from the
+    classified parquet so the caller doesn't have to resend them.
+    """
+    pq = os.path.join(PROJECT_DIR, "data", "classified", "acmg_results.parquet")
+    if not os.path.exists(pq):
+        return jsonify({"error": "no classified variants — run pipeline first"}), 404
+
+    df = pd.read_parquet(pq)
+    matches = df[df["variant_id"] == variant_id]
+    if matches.empty:
+        return jsonify({"error": f"variant {variant_id} not found"}), 404
+    row = matches.iloc[0]
+    gene = row.get("gene", "")
+    hgvs_p = row.get("hgvs_p", "")
+
+    try:
+        from pipeline.utils.litvar_client import query_litvar
+    except Exception as e:
+        return jsonify({"error": f"import failed: {e}"}), 500
+    return jsonify(query_litvar(gene, hgvs_p))
+
+
 @app.route("/api/demo/load", methods=["POST"])
 def api_demo_load():
     """Copy bundled demo VCF + precomputed outputs into the live data dirs.
