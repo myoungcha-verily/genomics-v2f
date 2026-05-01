@@ -385,17 +385,21 @@ def api_demo_load():
     """
     body = request.get_json(silent=True) or {}
     mode = body.get("mode", "germline")
-    if mode not in ("germline", "somatic"):
+    if mode not in ("germline", "somatic", "cnv"):
         return jsonify({"error": f"Unknown demo mode: {mode}"}), 400
 
     if mode == "germline":
         src_demo_dir = os.path.join(DEMO_DIR, "germline")
         precomputed_dir = os.path.join(DEMO_DIR, "precomputed")
         vcf_basename = "proband.vcf.gz"
-    else:  # somatic
+    elif mode == "somatic":
         src_demo_dir = os.path.join(DEMO_DIR, "somatic")
         precomputed_dir = os.path.join(DEMO_DIR, "precomputed_somatic")
         vcf_basename = "tumor_normal.vcf.gz"
+    else:  # cnv
+        src_demo_dir = os.path.join(DEMO_DIR, "sv")
+        precomputed_dir = os.path.join(DEMO_DIR, "precomputed_sv")
+        vcf_basename = "sv_demo.vcf.gz"
 
     if not os.path.isdir(src_demo_dir) or not os.path.isdir(precomputed_dir):
         return jsonify({"error": f"{mode} demo data not bundled in this build"}), 500

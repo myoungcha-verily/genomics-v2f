@@ -1,0 +1,44 @@
+{
+  "_source": "ClinGen Dosage Sensitivity Map (https://search.clinicalgenome.org/kb/gene-dosage). Subset of well-established haploinsufficient (HI=3) and triplosensitive (TS=3) genes — the curated entries that ACMG/ClinGen 2019 (Riggs PMID 31690835) Section 2 weights heavily. Production deployments should fetch the live ClinGen API via scripts/refresh_clingen_dosage.sh.",
+  "_haploinsufficient_3": [
+    {"gene": "BRCA1", "chrom": "chr17", "start": 43044295, "end": 43125483},
+    {"gene": "BRCA2", "chrom": "chr13", "start": 32315086, "end": 32400266},
+    {"gene": "TP53",  "chrom": "chr17", "start": 7668421,  "end": 7687490},
+    {"gene": "PTEN",  "chrom": "chr10", "start": 87863113, "end": 87971930},
+    {"gene": "MLH1",  "chrom": "chr3",  "start": 36993488, "end": 37050842},
+    {"gene": "MSH2",  "chrom": "chr2",  "start": 47403067, "end": 47634501},
+    {"gene": "RB1",   "chrom": "chr13", "start": 48303256, "end": 48481890},
+    {"gene": "NF1",   "chrom": "chr17", "start": 31094927, "end": 31377677},
+    {"gene": "APC",   "chrom": "chr5",  "start": 112707518, "end": 112846239},
+    {"gene": "MECP2", "chrom": "chrX",  "start": 154021572, "end": 154137103},
+    {"gene": "DMD",   "chrom": "chrX",  "start": 31119219, "end": 33339609},
+    {"gene": "SMN1",  "chrom": "chr5",  "start": 70924941, "end": 70953015},
+    {"gene": "MYBPC3", "chrom": "chr11", "start": 47331407, "end": 47352706},
+    {"gene": "FBN1",  "chrom": "chr15", "start": 48408313, "end": 48645709},
+    {"gene": "TBX1",  "chrom": "chr22", "start": 19754049, "end": 19778925}
+  ],
+  "_triplosensitive_3": [
+    {"gene": "MECP2", "chrom": "chrX", "start": 154021572, "end": 154137103},
+    {"gene": "PMP22", "chrom": "chr17", "start": 15159001, "end": 15315000}
+  ],
+  "_recurrent_pathogenic_loci": [
+    {"name": "22q11.2 deletion (DiGeorge)",
+     "chrom": "chr22", "start": 18900000, "end": 21500000,
+     "type": "DEL", "score": 1.0,
+     "_note": "ClinGen recurrent benchmark; haploinsufficiency of TBX1 + others"},
+    {"name": "1q21.1 deletion",
+     "chrom": "chr1", "start": 146400000, "end": 147700000,
+     "type": "DEL", "score": 0.95},
+    {"name": "16p11.2 deletion (autism)",
+     "chrom": "chr16", "start": 29500000, "end": 30200000,
+     "type": "DEL", "score": 0.90},
+    {"name": "15q11-q13 (Prader-Willi/Angelman)",
+     "chrom": "chr15", "start": 22800000, "end": 28400000,
+     "type": "DEL", "score": 1.0}
+  ],
+  "_recurrent_benign_loci": [
+    {"name": "Common 2p11.2 IGK polymorphic CNV",
+     "chrom": "chr2", "start": 89125000, "end": 89165000,
+     "type": "DEL", "_note": "Frequent in gnomAD-SV; Section 1 -1 point"}
+  ]
+}

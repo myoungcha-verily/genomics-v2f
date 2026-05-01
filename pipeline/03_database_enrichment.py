@@ -54,14 +54,29 @@ def run(config: dict) -> dict:
         df["clinvar_review_stars"] = 0
         df["clinvar_id"] = None
 
-    # Step 2: gnomAD enrichment
+    # Step 2: gnomAD enrichment (small variants)
     gnomad_config = db_config.get("gnomad", {})
-    if gnomad_config.get("bq_table_pattern") or gnomad_config.get("bq_table"):
-        df = _enrich_gnomad(df, gnomad_config)
+    sv_mask = df["svtype"].notna() if "svtype" in df.columns else None
+    if sv_mask is not None and sv_mask.any():
+        small_df = df[~sv_mask].copy()
     else:
-        logger.info("gnomAD BQ table not configured — skipping")
-        df["gnomad_af"] = None
-        df["gnomad_af_popmax"] = None
+        small_df = df
+
+    if not small_df.empty and (gnomad_config.get("bq_table_pattern")
+                                 or gnomad_config.get("bq_table")):
+        small_df = _enrich_gnomad(small_df, gnomad_config)
+    else:
+        logger.info("gnomAD BQ table not configured / no small variants — skipping")
+        small_df["gnomad_af"] = None
+        small_df["gnomad_af_popmax"] = None
+
+    # SV-specific enrichment (gnomAD-SV + gene-content count)
+    if sv_mask is not None and sv_mask.any():
+        sv_df = df[sv_mask].copy()
+        sv_df = _enrich_svs(sv_df, db_config)
+        df = pd.concat([small_df, sv_df], ignore_index=True)
+    else:
+        df = small_df
 
     # Use VEP gnomAD AF as fallback
     if "gnomad_af" in df.columns and "gnomad_af_vep" in df.columns:
@@ -298,6 +313,98 @@ def _enrich_gnomad(df: pd.DataFrame, gnomad_config: dict) -> pd.DataFrame:
     n_matches = df["gnomad_af"].notna().sum()
     logger.info(f"gnomAD: {n_matches} variants matched")
 
+    return df
+
+
+def _enrich_svs(df: pd.DataFrame, db_config: dict) -> pd.DataFrame:
+    """Enrich structural variants with gnomAD-SV AF + gene-content count.
+
+    Rolls SV rows through:
+      1. gnomAD-SV BQ lookup if configured (databases.gnomad_sv.bq_table)
+      2. Gene count from bundled ClinGen DS reference (counts HI/TS gene
+         overlaps as a rough lower bound — production deployments should
+         join against a refseq/Ensembl gene-coords table)
+    """
+    gnomad_sv_cfg = db_config.get("gnomad_sv", {}) or {}
+    df["gnomad_sv_af"] = None
+    df["gnomad_sv_ac"] = None
+
+    if gnomad_sv_cfg.get("bq_table"):
+        df = _enrich_gnomad_sv(df, gnomad_sv_cfg)
+
+    # Count genes overlapped per SV using bundled ClinGen DS table as a
+    # lower-bound approximation. (A full implementation would query refseq
+    # exons or Ensembl regulatory tables.)
+    from pipeline.utils.cnv_engine import _load_clingen_ds, _interval_overlaps
+    ds = _load_clingen_ds()
+    hi_genes = ds.get("_haploinsufficient_3", []) + ds.get("_triplosensitive_3", [])
+
+    n_genes_list = []
+    for _, row in df.iterrows():
+        chrom = row.get("chrom")
+        start = int(row.get("pos") or 0)
+        end_pos = row.get("end_pos")
+        end = int(end_pos) if end_pos is not None else start
+        n = sum(1 for g in hi_genes
+                if g["chrom"] == chrom
+                and _interval_overlaps(start, end, g["start"], g["end"]))
+        n_genes_list.append(n)
+    df["n_genes"] = n_genes_list
+
+    logger.info(f"SV enrichment: {len(df)} SVs annotated with gene counts + gnomAD-SV AF")
+    return df
+
+
+def _enrich_gnomad_sv(df: pd.DataFrame, gnomad_sv_cfg: dict) -> pd.DataFrame:
+    """Query gnomAD-SV BigQuery table for SV allele frequencies.
+
+    The schema varies by deployment; this implementation assumes a
+    `(chrom, start, end, svtype, AF, AC)` projection. Falls back gracefully
+    on schema mismatches.
+    """
+    from google.cloud import bigquery
+    bq_table = gnomad_sv_cfg["bq_table"]
+    logger.info(f"Querying gnomAD-SV: {bq_table}")
+    client = bigquery.Client()
+
+    n = len(df)
+    if n == 0:
+        return df
+
+    # Build a UNION of small WHERE clauses per row (small N expected for SV)
+    conditions = []
+    for _, row in df.iterrows():
+        chrom = str(row["chrom"]).replace("chr", "")
+        start = int(row["pos"])
+        end = int(row["end_pos"] or start)
+        svtype = row["svtype"] or ""
+        # Match by chromosome + interval overlap fraction
+        conditions.append(
+            f"(reference_name='{chrom}' AND svtype='{svtype}' "
+            f"AND start_position <= {end} AND end_position >= {start})"
+        )
+
+    where = " OR ".join(conditions) if conditions else "FALSE"
+    query = f"""
+    SELECT reference_name AS chrom, start_position AS pos,
+           end_position AS end_pos, svtype, AF, AC
+    FROM `{bq_table}`
+    WHERE {where}
+    """
+    try:
+        sv_df = client.query(query).to_dataframe()
+        if not sv_df.empty:
+            # Take max AF across overlapping SVs (conservative: assume the
+            # CNV in our VCF could be the same as any of these)
+            for idx, row in df.iterrows():
+                chrom = str(row["chrom"]).replace("chr", "")
+                matches = sv_df[(sv_df["chrom"] == chrom)
+                                 & (sv_df["svtype"] == row["svtype"])]
+                if not matches.empty:
+                    df.at[idx, "gnomad_sv_af"] = float(matches["AF"].max())
+                    df.at[idx, "gnomad_sv_ac"] = int(matches["AC"].max())
+    except Exception as e:
+        logger.warning(f"gnomAD-SV query failed: {e}")
     return df
 
 

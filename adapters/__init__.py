@@ -5,6 +5,7 @@ from adapters.trio_adapter import TrioAdapter
 from adapters.panel_adapter import PanelAdapter
 from adapters.gvcf_adapter import GVCFAdapter
 from adapters.somatic_adapter import SomaticAdapter
+from adapters.sv_adapter import SVAdapter
 
 ADAPTER_REGISTRY = {
     "single_sample": SingleSampleAdapter,
@@ -13,6 +14,8 @@ ADAPTER_REGISTRY = {
     "gvcf": GVCFAdapter,
     "somatic": SomaticAdapter,
     "somatic_pair": SomaticAdapter,  # alias — same impl handles paired and tumor-only
+    "sv": SVAdapter,
+    "cnv": SVAdapter,  # alias — CNVs are SVs
 }
 
 

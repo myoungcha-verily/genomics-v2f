@@ -64,9 +64,34 @@ def run(config: dict) -> dict:
     classifications = []
     criteria_details = []
     somatic_results = []  # only populated when mode in ('somatic', 'both')
+    cnv_results = []  # populated when row has svtype set
+
+    from pipeline.utils.cnv_engine import is_sv_variant, classify_cnv
 
     for idx, row in df.iterrows():
         variant_dict = row.to_dict()
+
+        # SV/CNV rows always route to the CNV engine regardless of mode.
+        # They're handled separately because ACMG/ClinGen 2019 is a
+        # different scoring system from ACMG/AMP.
+        if is_sv_variant(variant_dict):
+            cnv = classify_cnv(variant_dict, config)
+            cnv_results.append({
+                "variant_id": row["variant_id"],
+                "cnv_classification": cnv["cnv_classification"],
+                "cnv_score": cnv["cnv_score"],
+                "cnv_evidence_summary": cnv["cnv_evidence_summary"],
+                "cnv_section_scores": json.dumps(cnv["cnv_section_scores"]),
+            })
+            classifications.append({
+                "variant_id": row["variant_id"],
+                "acmg_classification": cnv["cnv_classification"],
+                "acmg_criteria": cnv["cnv_evidence_summary"],
+                "acmg_tier": classification_tier(cnv["cnv_classification"]),
+                "n_pathogenic_criteria": 0,
+                "n_benign_criteria": 0,
+            })
+            continue
 
         if mode in ("germline", "both"):
             result = classify_variant(variant_dict, config)
@@ -140,6 +165,11 @@ def run(config: dict) -> dict:
     if somatic_results:
         amp_df = pd.DataFrame(somatic_results)
         df = df.merge(amp_df, on="variant_id", how="left")
+
+    # Merge CNV results (any rows with svtype)
+    if cnv_results:
+        cnv_df = pd.DataFrame(cnv_results)
+        df = df.merge(cnv_df, on="variant_id", how="left")
 
     # Sort by clinical importance: ACMG germline tiers + AMP somatic tiers
     tier_order = {"Pathogenic": 0, "Likely pathogenic": 1, "VUS": 2,

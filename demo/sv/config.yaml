@@ -1,0 +1,35 @@
+# Structural-variant demo configuration for V2F Reporter
+input:
+  adapter: sv
+  analysis_mode: cnv
+  vcf_path: data/vcf/sv_demo.vcf.gz
+  reference_genome: GRCh38
+
+annotation:
+  vep_mode: skip   # demo skips VEP
+
+databases:
+  gnomad_sv:
+    enabled: false
+    bq_table: ""   # optional; bundled fallback used when empty
+  clingen_dosage:
+    enabled: true   # uses bundled reference/clingen_dosage_sensitivity.json
+  decipher:
+    enabled: false
+    bq_table: ""
+
+acmg:
+  enable_pvs1: false   # ACMG/AMP not used; ACMG/ClinGen 2019 applies
+  enable_population_criteria: false
+
+phenotype:
+  enabled: false   # not used for SV interpretation
+
+output:
+  data_dir: data
+  reports_dir: reports
+  report_format: html
+
+pipeline:
+  parallel_workers: 4
+  log_level: INFO
