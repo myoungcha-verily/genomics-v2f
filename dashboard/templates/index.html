@@ -126,6 +126,7 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
   <div class="tab" onclick="showTab('variants', event)">Variants</div>
   <div class="tab" onclick="showTab('reports', event)">Reports</div>
   <div class="tab" onclick="showTab('curate', event)">Curate</div>
+  <div class="tab" onclick="showTab('validation', event)">Validation</div>
   <div class="tab" onclick="showTab('settings', event)">Settings</div>
 </div>
 
@@ -385,6 +386,15 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
   </div>
 </div>
 
+<!-- ===== VALIDATION ===== -->
+<div id="tab-validation" class="tab-panel">
+  <div class="card">
+    <h3>Pipeline validation gates <span id="validationOverallBadge" style="margin-left:10px;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;letter-spacing:.5px;"></span></h3>
+    <p style="color:#666;margin-bottom:12px;">Per-stage acceptance gates that fire at the end of each pipeline stage. Configure thresholds + mode (warning vs hard_fail) under <code>pipeline.gates</code> in your config. The all-VUS gate (stage 4) and ClinVar match-rate gate (stage 3) catch the failure modes that hit M0 in the wild.</p>
+    <div id="validationStages"></div>
+  </div>
+</div>
+
 <!-- ===== SETTINGS ===== -->
 <div id="tab-settings" class="tab-panel">
   <div id="demoSettingsCard" class="card" style="border-left:4px solid #f9a825;background:#fff8e1;">
@@ -515,6 +525,7 @@ function showTab(name, evt) {
   if (name === 'variants') loadVariants();
   if (name === 'reports') loadReports();
   if (name === 'curate') loadCurateVariants();
+  if (name === 'validation') loadValidation();
   if (name === 'settings') { loadSettings(); loadPanels(); }
   if (name === 'overview' || name === 'pipeline') refreshStatus();
 }
@@ -1052,6 +1063,46 @@ function saveSettings() {
     loadConfig();
   }).catch(e => {
     const el = document.getElementById('settingsStatus'); el.textContent = 'Save failed'; el.style.color='#d32f2f';
+  });
+}
+
+// ===== Validation tab =====
+function loadValidation() {
+  fetch('api/validation').then(r=>r.json()).then(data => {
+    const overall = document.getElementById('validationOverallBadge');
+    if (overall) {
+      if (!data.stages.length) {
+        overall.textContent = 'NO RUN'; overall.style.background = '#bdbdbd'; overall.style.color = '#fff';
+      } else if (data.n_hard_fails > 0) {
+        overall.textContent = `${data.n_hard_fails} HARD FAIL`; overall.style.background = '#d32f2f'; overall.style.color = '#fff';
+      } else if (data.n_warnings > 0) {
+        overall.textContent = `${data.n_warnings} WARN`; overall.style.background = '#f9a825'; overall.style.color = '#333';
+      } else {
+        overall.textContent = 'PASS'; overall.style.background = '#2e7d32'; overall.style.color = '#fff';
+      }
+    }
+    const el = document.getElementById('validationStages');
+    if (!el) return;
+    if (!data.stages.length) {
+      el.innerHTML = '<p style="color:#999;padding:14px;">No pipeline run yet. Run the pipeline or load a demo, then revisit.</p>';
+      return;
+    }
+    el.innerHTML = data.stages.map(s => {
+      const gateRows = (s.gates || []).map(g => {
+        const color = g.passed ? '#2e7d32' : (g.severity === 'hard_fail' ? '#d32f2f' : '#f9a825');
+        const sym = g.passed ? '✓' : '✗';
+        return `<tr><td style="color:${color};font-weight:700;width:30px;">${sym}</td><td><strong>${g.name}</strong></td><td>${g.actual||''}</td><td style="color:#888;">${g.expected||''}</td><td style="font-size:12px;color:#555;">${g.message||''}</td></tr>`;
+      }).join('') || '<tr><td colspan="5" style="color:#999;">No gates configured for this stage.</td></tr>';
+      const summaryItems = Object.entries(s.summary||{}).map(([k,v]) => `<span style="margin-right:14px;color:#555;font-size:12px;"><strong>${k}</strong>: ${v}</span>`).join('');
+      return `<div style="margin:18px 0;padding:14px;border:1px solid #e0e0e0;border-radius:6px;">
+        <h4 style="color:#1565c0;margin-bottom:6px;">${s.label||s.stage}</h4>
+        <div style="margin-bottom:10px;">${summaryItems}</div>
+        <table style="margin-top:8px;"><thead><tr><th></th><th>Gate</th><th>Actual</th><th>Expected</th><th>Message</th></tr></thead><tbody>${gateRows}</tbody></table>
+      </div>`;
+    }).join('');
+  }).catch(e => {
+    const el = document.getElementById('validationStages');
+    if (el) el.innerHTML = `<p style="color:#d32f2f;">Validation lookup failed: ${e.message}</p>`;
   });
 }
 

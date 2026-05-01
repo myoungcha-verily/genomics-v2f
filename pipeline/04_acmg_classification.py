@@ -211,6 +211,11 @@ def run(config: dict) -> dict:
         "elapsed_seconds": round(time.time() - t0, 1),
     }
 
+    # Run stage 4 acceptance gates (catches the all-VUS failure mode)
+    from pipeline.utils import quality_gates
+    result["quality_gates"] = quality_gates.evaluate(
+        "stage_4", dict(class_counts), config)
+
     with open(os.path.join(class_dir, "classification_summary.json"), "w") as f:
         json.dump(result, f, indent=2, default=str)
 

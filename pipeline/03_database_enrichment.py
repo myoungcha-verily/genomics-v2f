@@ -95,8 +95,13 @@ def run(config: dict) -> dict:
         "total_variants": len(df),
         "clinvar_matches": int(n_clinvar),
         "gnomad_matches": int(n_gnomad),
+        "clinvar_table": (config.get("databases", {}).get("clinvar", {}) or {}).get("bq_table"),
         "elapsed_seconds": round(time.time() - t0, 1),
     }
+
+    # Run stage 3 acceptance gates
+    from pipeline.utils import quality_gates
+    result["quality_gates"] = quality_gates.evaluate("stage_3", result, config)
 
     with open(os.path.join(enrich_dir, "enrichment_summary.json"), "w") as f:
         json.dump(result, f, indent=2, default=str)

@@ -377,6 +377,62 @@ def api_phenotype_test():
     return jsonify(result)
 
 
+@app.route("/api/validation")
+def api_validation():
+    """Aggregate quality-gate results from each stage's summary JSON.
+
+    Returns:
+        {
+          "stages": [
+            {"stage": "stage_1", "gates": [{"name", "passed", ...}], ...},
+            {"stage": "stage_3", "gates": [...], ...},
+            {"stage": "stage_4", "gates": [...], ...}
+          ],
+          "overall_passed": bool,
+          "n_warnings": int,
+          "n_hard_fails": int,
+        }
+    """
+    summaries = [
+        ("stage_1", "data/vcf/qc_report.json"),
+        ("stage_3", "data/enriched/enrichment_summary.json"),
+        ("stage_4", "data/classified/classification_summary.json"),
+    ]
+    out = {"stages": [], "overall_passed": True,
+           "n_warnings": 0, "n_hard_fails": 0}
+    for stage, rel_path in summaries:
+        path = os.path.join(PROJECT_DIR, rel_path)
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except Exception:
+            continue
+        gates = data.get("quality_gates", []) or []
+        if not isinstance(gates, list):
+            gates = []
+        for g in gates:
+            if not g.get("passed"):
+                if g.get("severity") == "hard_fail":
+                    out["n_hard_fails"] += 1
+                    out["overall_passed"] = False
+                else:
+                    out["n_warnings"] += 1
+        out["stages"].append({
+            "stage": stage,
+            "label": data.get("stage", stage),
+            "gates": gates,
+            "summary": {k: data.get(k) for k in
+                         ("total_variants", "total_variants_filtered",
+                          "clinvar_matches", "gnomad_matches",
+                          "pathogenic", "likely_pathogenic", "vus",
+                          "likely_benign", "benign")
+                         if k in data},
+        })
+    return jsonify(out)
+
+
 @app.route("/api/curation/<variant_id>", methods=["GET"])
 def api_curation_list(variant_id):
     """List curation entries for a variant."""

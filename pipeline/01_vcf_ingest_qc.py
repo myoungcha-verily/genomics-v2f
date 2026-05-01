@@ -100,6 +100,11 @@ def run(config: dict) -> dict:
     all_variants_path = os.path.join(vcf_dir, "variants_all.parquet")
     variants_df.to_parquet(all_variants_path, index=False)
 
+    # Run quality gates (logs warnings; raises GateFailure on hard_fail)
+    from pipeline.utils import quality_gates
+    gate_payload = {**qc_metrics, "n_variants": len(filtered_df)}
+    gate_results = quality_gates.evaluate("stage_1", gate_payload, config)
+
     # Save QC report
     qc_report = {
         "stage": "01_vcf_ingest_qc",
@@ -113,6 +118,7 @@ def run(config: dict) -> dict:
         "total_variants_filtered": len(filtered_df),
         "filter_counts": filter_counts,
         "qc_metrics": qc_metrics,
+        "quality_gates": gate_results,
         "elapsed_seconds": round(time.time() - t0, 1),
     }
     qc_path = os.path.join(vcf_dir, "qc_report.json")
