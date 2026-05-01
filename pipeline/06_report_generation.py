@@ -175,6 +175,22 @@ def run(config: dict) -> dict:
                 )
             reports_generated.append(report_path)
             logger.info(f"Report generated: {report_path}")
+
+            # Optional FHIR / PDF / CSV exports — each gated by config
+            from pipeline.utils import csv_exporter, fhir_exporter, pdf_renderer
+            out_cfg = config.get("output", {}) or {}
+            if out_cfg.get("csv_export", True):  # default-on (cheap)
+                csv_path = os.path.join(reports_dir,
+                                          f"{proband_id}_variants.csv")
+                csv_exporter.export_csv(proband_df, csv_path)
+            if fhir_exporter.is_enabled(config):
+                fhir_path = os.path.join(reports_dir,
+                                           f"{proband_id}_fhir.json")
+                fhir_exporter.export_fhir_diagnostic_report(
+                    proband_df, proband_id, fhir_path,
+                    config=config, manifest=manifest)
+            if pdf_renderer.is_enabled(config):
+                pdf_renderer.render_html_to_pdf(report_path)
         except (FileNotFoundError, OSError) as e:
             err = {"sample_id": proband_id, "error_type": "io_error", "message": str(e)}
             report_errors.append(err)
