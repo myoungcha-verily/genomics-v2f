@@ -1,4 +1,0 @@
-# Temporarily excluded — PAT lacks `workflow` scope.
-# To restore: ensure PAT has the `workflow` permission, then:
-#   git add .github/workflows/ && git commit -m "ci: enable test+lint workflows"
-.github/workflows/
