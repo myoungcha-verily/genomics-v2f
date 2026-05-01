@@ -127,6 +127,7 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
   <div class="tab" onclick="showTab('reports', event)">Reports</div>
   <div class="tab" onclick="showTab('curate', event)">Curate</div>
   <div class="tab" onclick="showTab('validation', event)">Validation</div>
+  <div class="tab" onclick="showTab('runs', event)">Runs</div>
   <div class="tab" onclick="showTab('settings', event)">Settings</div>
 </div>
 
@@ -152,6 +153,11 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
   <div class="card">
     <h3>Reference Databases</h3>
     <div id="dbStatus">Loading...</div>
+  </div>
+  <div class="card">
+    <h3>Reference data freshness</h3>
+    <p style="color:#666;margin-bottom:8px;font-size:12px;">Last-refresh timestamps for each external data source. Run <code>scripts/refresh_*.sh</code> to update; warnings appear after 30 days. Bundled fallbacks are always available.</p>
+    <div id="refreshStatus">Loading...</div>
   </div>
   <div class="card">
     <h3>Quick Start</h3>
@@ -395,6 +401,15 @@ details.setting-section .section-body{padding:12px 18px 18px;border-top:1px soli
   </div>
 </div>
 
+<!-- ===== RUNS ===== -->
+<div id="tab-runs" class="tab-panel">
+  <div class="card">
+    <h3>Pipeline run history</h3>
+    <p style="color:#666;margin-bottom:12px;">Last 50 pipeline runs in this workspace. Each row links to its run manifest (git SHA + config hash + reference-data versions). Run history persists in <code>data/run_history.jsonl</code> by default; configure <code>databases.runs.bq_table</code> for a shared BigQuery backend.</p>
+    <div id="runsList">Loading…</div>
+  </div>
+</div>
+
 <!-- ===== SETTINGS ===== -->
 <div id="tab-settings" class="tab-panel">
   <div id="demoSettingsCard" class="card" style="border-left:4px solid #f9a825;background:#fff8e1;">
@@ -526,6 +541,7 @@ function showTab(name, evt) {
   if (name === 'reports') loadReports();
   if (name === 'curate') loadCurateVariants();
   if (name === 'validation') loadValidation();
+  if (name === 'runs') loadRuns();
   if (name === 'settings') { loadSettings(); loadPanels(); }
   if (name === 'overview' || name === 'pipeline') refreshStatus();
 }
@@ -657,6 +673,23 @@ function refreshStatus() {
     });
     const el = document.getElementById('dbStatus');
     if (el) el.innerHTML = html || '<p style="color:#999;">No databases configured</p>';
+  }).catch(()=>{});
+
+  // Reference-data freshness tile
+  fetch('api/refresh-status').then(r=>r.json()).then(data => {
+    const el = document.getElementById('refreshStatus');
+    if (!el) return;
+    el.innerHTML = (data.items || []).map(it => {
+      const color = it.stale ? '#f9a825' : '#2e7d32';
+      const icon = it.stale ? '⚠' : '✓';
+      const age = (it.age_days != null) ? `${it.age_days}d` : 'never';
+      const ts = it.refreshed_at || '—';
+      return `<div style="padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:13px;">
+        <span style="color:${color};font-weight:700;margin-right:6px;">${icon}</span>
+        <strong>${it.source}</strong>
+        <span style="float:right;color:#888;">last refresh: ${age} ago · ${ts}</span>
+      </div>`;
+    }).join('');
   }).catch(()=>{});
 }
 
@@ -1063,6 +1096,45 @@ function saveSettings() {
     loadConfig();
   }).catch(e => {
     const el = document.getElementById('settingsStatus'); el.textContent = 'Save failed'; el.style.color='#d32f2f';
+  });
+}
+
+// ===== Runs tab =====
+function loadRuns() {
+  fetch('api/runs').then(r=>r.json()).then(data => {
+    const el = document.getElementById('runsList');
+    if (!el) return;
+    if (!data.runs || !data.runs.length) {
+      el.innerHTML = '<p style="color:#999;padding:14px;">No pipeline runs recorded yet.</p>';
+      return;
+    }
+    const rows = data.runs.map(r => {
+      const fmt = ts => ts ? new Date(ts * 1000).toISOString().slice(0,19).replace('T',' ') : '—';
+      const dur = r.duration_seconds ? `${r.duration_seconds.toFixed(0)}s` : '—';
+      const statusColor = {success: '#2e7d32', failure: '#d32f2f',
+                            partial: '#f9a825'}[r.status] || '#9e9e9e';
+      const sha = (r.git_sha || '').slice(0, 8) || '—';
+      const cfg = (r.config_hash || '').slice(7, 19) || '—';
+      const summaryParts = r.summary && r.summary.completed_stages
+        ? `${r.summary.completed_stages.length}/7 stages`
+        : '';
+      return `<tr>
+        <td style="font-family:monospace;font-size:11px;">${(r.run_id||'').slice(0,8)}</td>
+        <td>${fmt(r.started_at)}</td>
+        <td>${dur}</td>
+        <td><span style="color:#fff;background:${statusColor};padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;">${(r.status||'?').toUpperCase()}</span></td>
+        <td>${r.analysis_mode||'?'}</td>
+        <td>${r.adapter||'?'}</td>
+        <td style="font-family:monospace;font-size:11px;color:#888;">${sha}</td>
+        <td style="font-family:monospace;font-size:11px;color:#888;">${cfg}</td>
+        <td style="font-size:11px;color:#666;">${summaryParts}</td>
+      </tr>`;
+    }).join('');
+    el.innerHTML = `<table>
+      <thead><tr><th>Run</th><th>Started</th><th>Duration</th><th>Status</th><th>Mode</th><th>Adapter</th><th>git SHA</th><th>config hash</th><th>Summary</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  }).catch(e => {
+    document.getElementById('runsList').innerHTML = `<p style="color:#d32f2f;">Run history lookup failed: ${e.message}</p>`;
   });
 }
 

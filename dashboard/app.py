@@ -377,6 +377,59 @@ def api_phenotype_test():
     return jsonify(result)
 
 
+@app.route("/api/refresh-status")
+def api_refresh_status():
+    """Surface the last-refresh timestamp for each reference data source.
+
+    Reads the JSON status files written by scripts/refresh_*.sh into
+    `reference/refresh_status/`. Reports which sources are stale (>30 days).
+    """
+    status_dir = os.path.join(PROJECT_DIR, "reference", "refresh_status")
+    sources = ["clinvar", "mavedb", "clingen_dosage"]
+    items = []
+    now = time.time()
+    for src in sources:
+        path = os.path.join(status_dir, f"{src}.json")
+        if not os.path.exists(path):
+            items.append({"source": src, "refreshed_at": None,
+                           "age_days": None, "stale": True,
+                           "status": "never refreshed"})
+            continue
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except Exception:
+            items.append({"source": src, "status": "read failed",
+                           "stale": True})
+            continue
+        ts_str = data.get("refreshed_at", "")
+        try:
+            from datetime import datetime
+            ts = datetime.strptime(ts_str.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
+            age_days = (now - ts.timestamp()) / 86400
+        except (ValueError, TypeError):
+            age_days = None
+        items.append({
+            "source": src,
+            "refreshed_at": ts_str,
+            "age_days": round(age_days, 1) if age_days is not None else None,
+            "stale": age_days is None or age_days > 30,
+            "details": data,
+        })
+    return jsonify({"items": items})
+
+
+@app.route("/api/runs")
+def api_runs():
+    """List recent pipeline runs (last 50)."""
+    try:
+        from pipeline.utils.run_history import list_runs
+    except Exception as e:
+        return jsonify({"error": f"import failed: {e}"}), 500
+    cfg = _load_config()
+    return jsonify({"runs": list_runs(cfg, limit=50)})
+
+
 @app.route("/api/validation")
 def api_validation():
     """Aggregate quality-gate results from each stage's summary JSON.

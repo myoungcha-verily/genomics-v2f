@@ -319,6 +319,18 @@ def main():
     results = {}
     failed_stage = None
 
+    # Record run start in run history (for the dashboard's Runs tab)
+    try:
+        from pipeline.utils.run_manifest import build_manifest
+        from pipeline.utils.run_history import record_run_start
+        manifest = build_manifest(config)
+        run_id = manifest["run_id"]
+        record_run_start(run_id, config, manifest)
+    except Exception as e:
+        print(f"  (run history record_start failed, continuing: {e})")
+        manifest = None
+        run_id = "unknown"
+
     for stage_num in stages_to_run:
         if stage_num not in STAGES:
             print(f"Unknown stage: {stage_num}")
@@ -364,6 +376,18 @@ def main():
             print(f"  ○ Stage {stage_num}: {STAGES[stage_num]['name']} (skipped)")
 
     print(f"\n  Total time: {elapsed:.1f}s ({elapsed/60:.1f} min)")
+
+    # Record run end in run history
+    try:
+        from pipeline.utils.run_history import record_run_end
+        status = "failure" if failed_stage else (
+            "partial" if any(s not in results for s in stages_to_run) else "success")
+        summary = {"completed_stages": list(results.keys()),
+                    "failed_stage": failed_stage,
+                    "elapsed_seconds": round(elapsed, 1)}
+        record_run_end(run_id, status, summary, config)
+    except Exception as e:
+        print(f"  (run history record_end failed: {e})")
 
     if failed_stage:
         print(f"\n  Pipeline failed at stage {failed_stage}.")
